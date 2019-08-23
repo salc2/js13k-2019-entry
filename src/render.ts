@@ -1,4 +1,4 @@
-import {State, Kind, Body} from './State';
+import {State, Kind, Body} from './state';
 import {drawImage, g, getImg,Img, postTexture, bindFrameBuffer, renderPostProcessing} from './render.webgl'
 import {renderUi} from './render.ui'
 
