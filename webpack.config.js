@@ -2,9 +2,9 @@ const path = require('path');
 
 module.exports = {
   entry: './src/index.tsx',
-  //devtool: 'inline-source-map',
-  mode: 'production',
-  //mode: 'development',
+  devtool: 'inline-source-map',
+  // mode: 'production',
+  mode: 'development',
   module: {
     rules: [
       {
@@ -19,7 +19,7 @@ module.exports = {
     ]
   },
   resolve: {
-    extensions: [ '.tsx', '.ts', '.js']
+    extensions: ['.tsx', '.ts', '.js']
   },
   output: {
     filename: 'bundle.js',

@@ -1,10 +1,10 @@
-import * as React from "react";
+/* import * as React from "react";
 import * as ReactDOM from "react-dom";
 import {Update} from './game.runner';
 import {Time, Action as GameAction} from './actions';
 import {update , initStateCmd,render,subs, Model as GameModel} from './index';
 import {Cmd, emptyCmd} from './cmd';
-import {initState, Spacing, State, moveCamera, 
+import {initState, Spacing, State, moveCamera,
     Body,Camera as CameraType} from './state';
     import {canvas,drawImage, g} from './render.webgl';
 
@@ -116,7 +116,7 @@ function oldScreent(){
     if (r > w/2) r = w/2;
     if (r > h/2) r = h/2;
     _2d.filter = 'blur(5px)';
-   
+
     _2d.beginPath();
     _2d.moveTo(x1 - r, y0);
     _2d.quadraticCurveTo(x1, y0, x1, y0 + r);
@@ -157,10 +157,10 @@ export const updateDebug:Update<Action,Model> = (a: Action, m: Model) =>{
 switch (a.kind) {
     case "parameter":
     return [[cam, players, cells, a.val,map,inv,tt,msg],emptyCmd<Action>()];
-    case "cameraPos": 
+    case "cameraPos":
     const moved:CameraType = moveCamera(cam,a.val[0],a.val[1],1000,1000);
     return [[moved, players, cells, pmt,map,inv,tt,msg] ,emptyCmd<Action>()];
-    case "playerVal": 
+    case "playerVal":
     const [xx,yy,ww,hh] = a.val;
     return [[cam, players.map( p =>{
         if(p[8] == "player"){
@@ -179,3 +179,4 @@ switch (a.kind) {
 
 
 
+ */
