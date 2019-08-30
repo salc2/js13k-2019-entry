@@ -1,4 +1,6 @@
 import './lib/tiny-canvas.js';
+import { resolve } from 'url';
+import { rejects } from 'assert';
 declare var TC: any;
 declare var TCTex: any;
 
@@ -9,7 +11,18 @@ interface Vector {
 interface Player {
   position: Vector
   velocity: Vector
-  jumpTo: number
+  dir: Dir
+  shooting: boolean
+}
+
+interface PlayerTexture {
+  width: number
+  height: number
+  text: WebGLTexture
+}
+enum Dir {
+  Left,
+  Right
 }
 
 enum EventType {
@@ -26,261 +39,317 @@ enum EventType {
 
 type Action = EventType
 type Model = Player;
-
-let currentDelta = 0.0
-let currentTime = 0.0
-let currentAction: Action = null
-const GRAVITY = 9.8
-const JUMP_VEL = 20 * 4
-const WALK_SPEED = 8.5
-let startTime = 0;
-let id = 0;
-
-function textureFromPixelArray(gl, dataArray, type, width, height) {
-  var dataTypedArray = new Uint8Array(dataArray); // Don't need to do this if the data is already in a typed array
-  var texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texImage2D(gl.TEXTURE_2D, 0, type, width, height, 0, type, gl.UNSIGNED_BYTE, dataTypedArray);
-  // Other texture setup here, like filter modes and mipmap generation
-  return texture;
-}
-
-
 var canvas = TC(document.getElementById('c'))
 
-var tex = null
-const img = new Image
-img.src = "soldier_idle.png"
-img.onload = () => {
-  tex = TCTex(canvas.g, img, img.width, img.height)
-}
+function loadTextures(urls: string[]): Promise<PlayerTexture[]> {
+  return new Promise((resolver, rejects) => {
+    let result: PlayerTexture[] = new Array<PlayerTexture>();
 
-let currentState: Model = {
-  position: { x: 128, y: 112.0 },
-  velocity: { x: 0.0, y: 0.0 },
-  jumpTo: 112.0
-}
-window["player"] = currentState
+    urls.forEach((url, index) => {
+      const img = new Image
+      img.src = url
+      img.onload = () => {
+        const g = document.createElement("canvas").getContext("2d")
+        g.canvas.height = img.height
+        g.canvas.width = img.width
+        g.drawImage(img, 0, 0, img.width, img.height)
+        const tex1 = {
+          width: img.width,
+          height: img.height,
+          text: TCTex(canvas.g, g.canvas, img.width, img.height) as WebGLTexture
+        }
 
-const keepAnimation = (time: number) => {
-  currentDelta = (time - startTime) / 100;
-  currentTime = time
-  startTime = time;
+        g.clearRect(0, 0, img.width, img.height)
+        g.save()
+        g.scale(-1, 1)
+        g.drawImage(img, img.width * -1, 0, img.width, img.height)
+        g.restore()
+        const tex2 = {
+          width: img.width,
+          height: img.height,
+          text: TCTex(canvas.g, g.canvas, img.width, img.height) as WebGLTexture
+        }
+        const i = index * 2
+        result[i] = tex1
+        result[i + 1] = tex2
 
-  update(currentAction, currentState)
-  render(currentState)
-
-  id = requestAnimationFrame(keepAnimation);
-};
-
-type Animation = [
-  number, //timer
-  number, //duration
-  number, //start_pos
-  number, //end_pos
-  number //state 0,1,2
-]
-function createAnim(d: number, s: number, e: number): Animation {
-  return [0, d, s, e, 0]
-}
-
-function updateAnim(an: Animation, dt: number): number {
-  const easeInQuad = (t: number) => t * t
-  const easeOutQuad = (t: number) => t * (2 - t)
-  if (an[0] < 1.0) {
-    an[0] += dt
-  }
-  let [tr, d, s, e, st] = an
-  const t = easeOutQuad(tr / d)
-  const nv = s + (t * (e - s))
-
-  return nv
-}
-
-
-function runGame() {
-  requestAnimationFrame(keepAnimation);
-}
-
-
-const handlerStart = (ev: TouchEvent) => {
-  switch (ev.currentTarget['id']) {
-    case "a":
-      currentAction = EventType.JumpPressed
-      break;
-    case "b":
-      currentAction = EventType.AttackPressed
-      break;
-    case "left":
-      currentAction = EventType.LeftPressed
-      break;
-    case "right":
-      currentAction = EventType.RightPressed
-      break;
-
-    default:
-      // code...
-      break;
-  }
-}
-const handlerEnd = (ev: TouchEvent) => {
-  switch (ev.currentTarget['id']) {
-    case "b":
-      currentAction = EventType.AttackReleased
-      break;
-    case "left":
-      currentAction = EventType.LeftReleased
-      break;
-    case "right":
-      currentAction = EventType.RightReleased
-      break;
-    default:
-      // code...
-      break;
-  }
-}
-
-const svgs: any = document.querySelectorAll("rect");
-const psOp = { passive: true };
-svgs.forEach(rec => {
-  rec.addEventListener("touchstart", handlerStart, psOp);
-  rec.addEventListener("touchend", handlerEnd, psOp);
-});
-
-
-svgs.forEach(rec => {
-  rec.removeEventListener("touchstart", handlerStart, psOp);
-  rec.removeEventListener("touchend", handlerEnd, psOp);
-})
-
-const handlerKBDown = (e: KeyboardEvent) => {
-  switch (e.keyCode) {
-    case 37:
-      currentAction = EventType.LeftPressed
-      break;
-    case 39:
-      currentAction = EventType.RightPressed
-      break;
-    case 38:
-      currentAction = EventType.JumpPressed
-      break;
-    case 13:
-      currentAction = EventType.UsePressed
-      break;
-    case 32:
-      currentAction = EventType.AttackPressed
-      break;
-    default:
-      break;
-  }
-};
-window.addEventListener('keydown', handlerKBDown, true);
-
-const handlerKBUp = (e: KeyboardEvent) => {
-  switch (e.keyCode) {
-    case 37:
-      currentAction = EventType.LeftReleased
-      break;
-    case 39:
-      currentAction = EventType.RightReleased
-      break;
-    case 32:
-      currentAction = EventType.AttackReleased
-      break;
-    default:
-      break;
-  }
-};
-window.addEventListener('keyup', handlerKBUp, true);
-
-let anim: Animation = null
-function update(a: Action, m: Model) {
-  switch (a) {
-    case EventType.JumpPressed:
-      if (!anim) {
-        anim = createAnim(1, m.position.y, m.position.y - (20 * 4))
+        if (index == urls.length - 1) {
+          setTimeout(() => {
+            resolver(result)
+          }, 1000)
+        }
       }
-      break;
-    case EventType.LeftPressed:
-      m.velocity.x = -WALK_SPEED
-      break;
-    case EventType.RightPressed:
-      m.velocity.x = WALK_SPEED
-      break;
-    case EventType.LeftReleased:
-      m.velocity.x = 0
-      break;
-    case EventType.RightReleased:
-      m.velocity.x = 0
-      break;
-    default:
-      break;
+    })
+  })
+}
+
+loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png"]).then((textures) => {
+  const [rightRun, leftRun, rightIdle, leftIdle, rightShoot, leftShoot] = textures
+
+  let currentDelta = 0.0
+  let currentTime = 0.0
+  let currentAction: Action = null
+  const GRAVITY = 10
+
+  const JUMP_VEL = 30
+  const WALK_SPEED = 6
+  let startTime = 0;
+  let id = 0;
+
+  function textureFromPixelArray(gl, dataArray, type, width, height) {
+    var dataTypedArray = new Uint8Array(dataArray); // Don't need to do this if the data is already in a typed array
+    var texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, type, width, height, 0, type, gl.UNSIGNED_BYTE, dataTypedArray);
+    // Other texture setup here, like filter modes and mipmap generation
+    return texture;
   }
-  if (anim) {
-    m.position.y = updateAnim(anim, currentDelta)
+
+  let currentState: Model = {
+    position: { x: 128, y: 0.0 },
+    velocity: { x: 0.0, y: 0.0 },
+    dir: Dir.Right,
+    shooting: false
   }
-  move(m)
-}
+  window["player"] = currentState
 
-//canvas.scale(4, 4)
-let texData = []
-for (var i = 0; i < 20 * 20 * 3; i++) {
-  texData[i] = 0.5
-}
+  const keepAnimation = (time: number) => {
+    currentDelta = (time - startTime) / 100;
+    currentTime = time
+    startTime = time;
 
-const floorTex = textureFromPixelArray(canvas.g, texData, canvas.g.RGB, 20, 20);
-function renderFloor() {
-  for (var y = 0; y < 256; y += 20) {
-    canvas.img(
-      floorTex,
-      y,
-      192 - 40,
-      20,
-      20,
-      0,
-      0,
-      1,
-      1
-    );
+    update(currentAction, currentState)
+    render(currentState)
+    currentAction = null
+    id = requestAnimationFrame(keepAnimation);
+  };
+
+  function runGame() {
+    requestAnimationFrame(keepAnimation);
   }
-}
 
 
-function getFloorForce(m: Model) {
-  return m.position.y > 192 - 80 ? GRAVITY * -1 : 0
-}
+  const handlerStart = (ev: TouchEvent) => {
+    switch (ev.currentTarget['id']) {
+      case "a":
+        currentAction = EventType.JumpPressed
+        break;
+      case "b":
+        currentAction = EventType.AttackPressed
+        break;
+      case "left":
+        currentAction = EventType.LeftPressed
+        break;
+      case "right":
+        currentAction = EventType.RightPressed
+        break;
 
-function move(model: Model): void {
-  model.position.x += model.velocity.x * currentDelta
-  // model.position.y += (model.jumpTo - model.position.y) * .1
-  //  model.position.y += (GRAVITY + getFloorForce(model)) * currentDelta
-}
+      default:
+        // code...
+        break;
+    }
+  }
+  const handlerEnd = (ev: TouchEvent) => {
+    switch (ev.currentTarget['id']) {
+      case "b":
+        currentAction = EventType.AttackReleased
+        break;
+      case "left":
+        currentAction = EventType.LeftReleased
+        break;
+      case "right":
+        currentAction = EventType.RightReleased
+        break;
+      default:
+        // code...
+        break;
+    }
+  }
 
-const render = (m: Model) => {
-  canvas.cls()
-  canvas.bkg(0.2, 0.2, 0.2)
-  renderFloor()
-
-  canvas.img(
-    tex,
-    m.position.x,
-    m.position.y,
-    img.width,
-    img.height,
-    0,
-    0,
-    1,
-    .5
-  );
-  canvas.flush();
-}
-
-if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-  const svgs: any = document.querySelectorAll("svg")
-  svgs.forEach(svg => {
-    svg.style.display = "block";
+  const svgs: any = document.querySelectorAll("rect");
+  const psOp = { passive: true };
+  svgs.forEach(rec => {
+    rec.addEventListener("touchstart", handlerStart, psOp);
+    rec.addEventListener("touchend", handlerEnd, psOp);
   });
-}
 
 
-runGame(); 
+  svgs.forEach(rec => {
+    rec.removeEventListener("touchstart", handlerStart, psOp);
+    rec.removeEventListener("touchend", handlerEnd, psOp);
+  })
+
+  const handlerKBDown = (e: KeyboardEvent) => {
+    switch (e.keyCode) {
+      case 37:
+        currentAction = EventType.LeftPressed
+        break;
+      case 39:
+        currentAction = EventType.RightPressed
+        break;
+      case 38:
+        currentAction = EventType.JumpPressed
+        break;
+      case 13:
+        currentAction = EventType.UsePressed
+        break;
+      case 32:
+        currentAction = EventType.AttackPressed
+        break;
+      default:
+        break;
+    }
+  };
+  window.addEventListener('keydown', handlerKBDown, true);
+
+  const handlerKBUp = (e: KeyboardEvent) => {
+    switch (e.keyCode) {
+      case 37:
+        currentAction = EventType.LeftReleased
+        break;
+      case 39:
+        currentAction = EventType.RightReleased
+        break;
+      case 32:
+        currentAction = EventType.AttackReleased
+        break;
+      default:
+        break;
+    }
+  };
+  window.addEventListener('keyup', handlerKBUp, true);
+  function update(a: Action, m: Model) {
+    switch (a) {
+      case EventType.JumpPressed:
+        if (m.position.y == FLOOR) {
+          m.velocity.y = -JUMP_VEL
+        }
+        break;
+      case EventType.LeftPressed:
+        m.dir = Dir.Left
+        m.velocity.x = -WALK_SPEED
+        break;
+      case EventType.RightPressed:
+        m.dir = Dir.Right
+        m.velocity.x = WALK_SPEED
+        break;
+      case EventType.LeftReleased:
+        m.velocity.x = 0
+        break;
+      case EventType.RightReleased:
+        m.velocity.x = 0
+        break;
+      case EventType.AttackPressed:
+        m.shooting = true
+        break;
+      case EventType.AttackReleased:
+        m.shooting = false
+        break;
+      default:
+        break;
+    }
+    move(m)
+  }
+
+  //canvas.scale(4, 4)
+  let texData = []
+  for (var i = 0; i < 20 * 20 * 3; i++) {
+    texData[i] = 0.5
+  }
+
+  const floorTex = textureFromPixelArray(canvas.g, texData, canvas.g.RGB, 20, 20);
+  function renderFloor() {
+    for (var y = 0; y < 256; y += 20) {
+      canvas.img(
+        floorTex,
+        y,
+        192 - 40,
+        20,
+        20,
+        0,
+        0,
+        1,
+        1
+      );
+    }
+  }
+
+  function applyGravity(model: Model) {
+    model.velocity.y = model.position.y < FLOOR ? model.velocity.y + (GRAVITY * currentDelta) : model.velocity.y
+  }
+  const FLOOR = 192 - 80
+  function move(model: Model): void {
+    applyGravity(model)
+    model.position.x += model.velocity.x * currentDelta
+    model.position.y = Math.min(model.position.y + (model.velocity.y * currentDelta), FLOOR)
+  }
+
+
+  function PlayerAnimation(
+    rightT: PlayerTexture,
+    leftT: PlayerTexture,
+    ticksPerFrame: number,
+    loop: boolean,
+    frames: number[][]) {
+    const nFrames = frames.length;
+    let frameIndex = 0,
+      tickCount = 0
+
+    this.update = function (m: Model) {
+      tickCount += 1
+      if (tickCount > ticksPerFrame) {
+        tickCount = 0
+        if (frameIndex < frames.length - 1) {
+          // Go to the next frame
+          frameIndex += 1;
+        } else if (loop) {
+          frameIndex = 0;
+        }
+      }
+      const [v0, u0, v1, u1] = frames[frameIndex]
+      let text = m.dir == Dir.Right ? rightT : leftT
+      canvas.img(
+        text.text,
+        m.position.x + (10),
+        m.position.y + (15),
+        20,
+        30,
+        v0,
+        u0,
+        v1,
+        u1
+      );
+    }
+
+  }
+
+  const idleAnim = new PlayerAnimation(rightIdle, leftIdle, 20, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
+  const runAnim = new PlayerAnimation(rightRun, leftRun, 8, true, [[0, 0, 1, 0.2], [0, .2, 1, 0.4], [0, .4, 1, 0.6], [0, .6, 1, 0.8], [0, .8, 1, 1.0]])
+  const ShootingAnim = new PlayerAnimation(rightShoot, leftShoot, 3, true, [[0, 0, 1, 0.25], [0, .25, 1, 0.5], [0, .5, 1, 0.75], [0, .75, 1, 1.0]])
+
+
+  const render = (m: Model) => {
+    canvas.cls()
+    canvas.bkg(0.2, 0.2, 0.2)
+    renderFloor()
+
+    if (m.shooting) {
+      ShootingAnim.update(m)
+    } else if (m.velocity.x == 0) {
+      idleAnim.update(m)
+    } else {
+      runAnim.update(m)
+    }
+    canvas.flush();
+  }
+
+  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+    const svgs: any = document.querySelectorAll("svg")
+    svgs.forEach(svg => {
+      svg.style.display = "block";
+    });
+  }
+
+
+  runGame()
+})

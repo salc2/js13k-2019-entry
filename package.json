@@ -4,7 +4,7 @@
   "description": "Entry for gamejam js13k 2019",
   "private": true,
   "scripts": {
-    "watch": "webpack --config webpack.config --colors --watch & npm start",
+    "watch": "webpack --config webpack.config --colors --watch",
     "start": "http-server dist",
     "compile": "webpack --config webpack.config --colors",
     "test": "jest"
