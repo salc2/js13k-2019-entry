@@ -2,7 +2,6 @@ import './lib/tiny-canvas.js';
 declare var TC: any;
 declare var TCTex: any;
 
-
 interface Vector {
   x: number
   y: number
@@ -10,6 +9,7 @@ interface Vector {
 interface Player {
   position: Vector
   velocity: Vector
+  jumpTo: number
 }
 
 enum EventType {
@@ -30,8 +30,8 @@ type Model = Player;
 let currentDelta = 0.0
 let currentTime = 0.0
 let currentAction: Action = null
-const GRAVITY = 13
-const JUMP_VEL = -10
+const GRAVITY = 9.8
+const JUMP_VEL = 20 * 4
 const WALK_SPEED = 8.5
 let startTime = 0;
 let id = 0;
@@ -56,9 +56,11 @@ img.onload = () => {
 }
 
 let currentState: Model = {
-  position: { x: 128, y: 0.0 },
-  velocity: { x: 0.0, y: 0.0 }
+  position: { x: 128, y: 112.0 },
+  velocity: { x: 0.0, y: 0.0 },
+  jumpTo: 112.0
 }
+window["player"] = currentState
 
 const keepAnimation = (time: number) => {
   currentDelta = (time - startTime) / 100;
@@ -70,6 +72,30 @@ const keepAnimation = (time: number) => {
 
   id = requestAnimationFrame(keepAnimation);
 };
+
+type Animation = [
+  number, //timer
+  number, //duration
+  number, //start_pos
+  number, //end_pos
+  number //state 0,1,2
+]
+function createAnim(d: number, s: number, e: number): Animation {
+  return [0, d, s, e, 0]
+}
+
+function updateAnim(an: Animation, dt: number): number {
+  const easeInQuad = (t: number) => t * t
+  const easeOutQuad = (t: number) => t * (2 - t)
+  if (an[0] < 1.0) {
+    an[0] += dt
+  }
+  let [tr, d, s, e, st] = an
+  const t = easeOutQuad(tr / d)
+  const nv = s + (t * (e - s))
+
+  return nv
+}
 
 
 function runGame() {
@@ -167,11 +193,13 @@ const handlerKBUp = (e: KeyboardEvent) => {
 };
 window.addEventListener('keyup', handlerKBUp, true);
 
-
+let anim: Animation = null
 function update(a: Action, m: Model) {
   switch (a) {
     case EventType.JumpPressed:
-      m.velocity.y = JUMP_VEL
+      if (!anim) {
+        anim = createAnim(1, m.position.y, m.position.y - (20 * 4))
+      }
       break;
     case EventType.LeftPressed:
       m.velocity.x = -WALK_SPEED
@@ -188,7 +216,10 @@ function update(a: Action, m: Model) {
     default:
       break;
   }
-  move(m, m.velocity.x, m.velocity.y)
+  if (anim) {
+    m.position.y = updateAnim(anim, currentDelta)
+  }
+  move(m)
 }
 
 //canvas.scale(4, 4)
@@ -216,13 +247,13 @@ function renderFloor() {
 
 
 function getFloorForce(m: Model) {
-  return m.position.y >= 192 - 80 ? GRAVITY * -1 : 0
+  return m.position.y > 192 - 80 ? GRAVITY * -1 : 0
 }
 
-function move(model: Model, vx: number, vy: number): void {
-  model.position.x += vx * currentDelta
-  model.velocity.y = (vy + (GRAVITY + getFloorForce(model))) * currentDelta
-  model.position.y += model.velocity.y
+function move(model: Model): void {
+  model.position.x += model.velocity.x * currentDelta
+  // model.position.y += (model.jumpTo - model.position.y) * .1
+  //  model.position.y += (GRAVITY + getFloorForce(model)) * currentDelta
 }
 
 const render = (m: Model) => {
