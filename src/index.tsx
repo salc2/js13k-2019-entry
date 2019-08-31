@@ -174,10 +174,10 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png"]).th
   });
 
 
-  svgs.forEach(rec => {
-    rec.removeEventListener("touchstart", handlerStart, psOp);
-    rec.removeEventListener("touchend", handlerEnd, psOp);
-  })
+  /*   svgs.forEach(rec => {
+      rec.removeEventListener("touchstart", handlerStart, psOp);
+      rec.removeEventListener("touchend", handlerEnd, psOp);
+    }) */
 
   const handlerKBDown = (e: KeyboardEvent) => {
     switch (e.keyCode) {
@@ -218,20 +218,67 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png"]).th
     }
   };
   window.addEventListener('keyup', handlerKBUp, true);
+
+  function PlayerAnimation(
+    rightT: PlayerTexture,
+    leftT: PlayerTexture,
+    ticksPerFrame: number,
+    loop: boolean,
+    frames: number[][]) {
+    const nFrames = frames.length;
+    let frameIndex = 0,
+      tickCount = 0
+
+    this.reset = function () { frameIndex = 0 }
+    this.update = function (m: Model) {
+      tickCount += 1
+      if (tickCount > ticksPerFrame) {
+        tickCount = 0
+        if (frameIndex < frames.length - 1) {
+          // Go to the next frame
+          frameIndex += 1;
+        } else if (loop) {
+          frameIndex = 0;
+        }
+      }
+      const [v0, u0, v1, u1] = frames[frameIndex]
+      let text = m.dir == Dir.Right ? rightT : leftT
+      canvas.img(
+        text.text,
+        m.position.x + (10),
+        m.position.y + (15),
+        20,
+        30,
+        v0,
+        u0,
+        v1,
+        u1
+      );
+    }
+
+  }
+
+  const idleAnim = new PlayerAnimation(rightIdle, leftIdle, 20, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
+  const runAnim = new PlayerAnimation(rightRun, leftRun, 8, true, [[0, 0, 1, 0.2], [0, .2, 1, 0.4], [0, .4, 1, 0.6], [0, .6, 1, 0.8], [0, .8, 1, 1.0]])
+  const ShootingAnim = new PlayerAnimation(rightShoot, leftShoot, 3, false, [[0, 0, 1, 0.25], [0, .25, 1, 0.5], [0, .5, 1, 0.75], [0, .75, 1, 1.0]])
+
   function update(a: Action, m: Model) {
     switch (a) {
       case EventType.JumpPressed:
         if (m.position.y == FLOOR) {
           m.velocity.y = -JUMP_VEL
         }
+        m.shooting = false
         break;
       case EventType.LeftPressed:
         m.dir = Dir.Left
         m.velocity.x = -WALK_SPEED
+        m.shooting = false
         break;
       case EventType.RightPressed:
         m.dir = Dir.Right
         m.velocity.x = WALK_SPEED
+        m.shooting = false
         break;
       case EventType.LeftReleased:
         m.velocity.x = 0
@@ -240,10 +287,18 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png"]).th
         m.velocity.x = 0
         break;
       case EventType.AttackPressed:
-        m.shooting = true
+        if (!m.shooting) {
+          m.shooting = true
+          ShootingAnim.reset()
+          m.velocity.x += (m.dir == Dir.Left ? 1.5 : -1.5)
+        } else {
+          m.velocity.x = 0
+          ShootingAnim.reset()
+        }
         break;
       case EventType.AttackReleased:
-        m.shooting = false
+        m.velocity.x = 0
+
         break;
       default:
         break;
@@ -284,50 +339,6 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png"]).th
     model.position.y = Math.min(model.position.y + (model.velocity.y * currentDelta), FLOOR)
   }
 
-
-  function PlayerAnimation(
-    rightT: PlayerTexture,
-    leftT: PlayerTexture,
-    ticksPerFrame: number,
-    loop: boolean,
-    frames: number[][]) {
-    const nFrames = frames.length;
-    let frameIndex = 0,
-      tickCount = 0
-
-    this.update = function (m: Model) {
-      tickCount += 1
-      if (tickCount > ticksPerFrame) {
-        tickCount = 0
-        if (frameIndex < frames.length - 1) {
-          // Go to the next frame
-          frameIndex += 1;
-        } else if (loop) {
-          frameIndex = 0;
-        }
-      }
-      const [v0, u0, v1, u1] = frames[frameIndex]
-      let text = m.dir == Dir.Right ? rightT : leftT
-      canvas.img(
-        text.text,
-        m.position.x + (10),
-        m.position.y + (15),
-        20,
-        30,
-        v0,
-        u0,
-        v1,
-        u1
-      );
-    }
-
-  }
-
-  const idleAnim = new PlayerAnimation(rightIdle, leftIdle, 20, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
-  const runAnim = new PlayerAnimation(rightRun, leftRun, 8, true, [[0, 0, 1, 0.2], [0, .2, 1, 0.4], [0, .4, 1, 0.6], [0, .6, 1, 0.8], [0, .8, 1, 1.0]])
-  const ShootingAnim = new PlayerAnimation(rightShoot, leftShoot, 3, true, [[0, 0, 1, 0.25], [0, .25, 1, 0.5], [0, .5, 1, 0.75], [0, .75, 1, 1.0]])
-
-
   const render = (m: Model) => {
     canvas.cls()
     canvas.bkg(0.2, 0.2, 0.2)
@@ -343,11 +354,12 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png"]).th
     canvas.flush();
   }
 
-  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+  /*  */if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
     const svgs: any = document.querySelectorAll("svg")
     svgs.forEach(svg => {
       svg.style.display = "block";
     });
+    /*  */
   }
 
 
