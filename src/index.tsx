@@ -8,14 +8,24 @@ interface Vector {
   x: number
   y: number
 }
-interface Player {
+
+interface Body {
   position: Vector
   velocity: Vector
   dir: Dir
+}
+interface Player extends Body {
   shooting: boolean
 }
+interface Enemy extends Body {
+}
 
-interface PlayerTexture {
+interface State {
+  player: Player
+  enemies: Enemy[]
+}
+
+interface BodyTexture {
   width: number
   height: number
   text: WebGLTexture
@@ -36,14 +46,13 @@ enum EventType {
   AttackReleased
 }
 
-
 type Action = EventType
-type Model = Player;
+type Model = State;
 var canvas = TC(document.getElementById('c'))
 
-function loadTextures(urls: string[]): Promise<PlayerTexture[]> {
+function loadTextures(urls: string[]): Promise<BodyTexture[]> {
   return new Promise((resolver, rejects) => {
-    let result: PlayerTexture[] = new Array<PlayerTexture>();
+    let result: BodyTexture[] = new Array<BodyTexture>();
 
     urls.forEach((url, index) => {
       const img = new Image
@@ -76,15 +85,15 @@ function loadTextures(urls: string[]): Promise<PlayerTexture[]> {
         if (index == urls.length - 1) {
           setTimeout(() => {
             resolver(result)
-          }, 1000)
+          }, 400)
         }
       }
     })
   })
 }
 
-loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png"]).then((textures) => {
-  const [rightRun, leftRun, rightIdle, leftIdle, rightShoot, leftShoot] = textures
+loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bot.png"]).then((textures) => {
+  const [rightRun, leftRun, rightIdle, leftIdle, rightShoot, leftShoot, rightBot, leftBot] = textures
 
   let currentDelta = 0.0
   let currentTime = 0.0
@@ -95,6 +104,7 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png"]).th
   const WALK_SPEED = 6
   let startTime = 0;
   let id = 0;
+  const [width, height] = [canvas.g.canvas.width, canvas.g.canvas.height]
 
   function textureFromPixelArray(gl, dataArray, type, width, height) {
     var dataTypedArray = new Uint8Array(dataArray); // Don't need to do this if the data is already in a typed array
@@ -106,12 +116,21 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png"]).th
   }
 
   let currentState: Model = {
-    position: { x: 128, y: 0.0 },
-    velocity: { x: 0.0, y: 0.0 },
-    dir: Dir.Right,
-    shooting: false
+    player: {
+      position: { x: 128, y: 0.0 },
+      velocity: { x: 0.0, y: 0.0 },
+      dir: Dir.Right,
+      shooting: false
+    },
+    enemies: [
+      {
+        position: { x: 128, y: 0.0 },
+        velocity: { x: WALK_SPEED, y: 0.0 },
+        dir: Dir.Left,
+      }
+    ]
   }
-  window["player"] = currentState
+  window["state"] = currentState
 
   const keepAnimation = (time: number) => {
     currentDelta = (time - startTime) / 100;
@@ -219,9 +238,9 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png"]).th
   };
   window.addEventListener('keyup', handlerKBUp, true);
 
-  function PlayerAnimation(
-    rightT: PlayerTexture,
-    leftT: PlayerTexture,
+  function BodyAnimation(
+    rightT: BodyTexture,
+    leftT: BodyTexture,
     ticksPerFrame: number,
     loop: boolean,
     frames: number[][]) {
@@ -229,8 +248,12 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png"]).th
     let frameIndex = 0,
       tickCount = 0
 
-    this.reset = function () { frameIndex = 0 }
-    this.update = function (m: Model) {
+    this.reset = function () {
+      if (!(frameIndex < nFrames - 1)) {
+        frameIndex = 0;
+      }
+    }
+    this.update = function (p: Body) {
       tickCount += 1
       if (tickCount > ticksPerFrame) {
         tickCount = 0
@@ -242,11 +265,11 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png"]).th
         }
       }
       const [v0, u0, v1, u1] = frames[frameIndex]
-      let text = m.dir == Dir.Right ? rightT : leftT
+      let text = p.dir == Dir.Right ? rightT : leftT
       canvas.img(
         text.text,
-        m.position.x + (10),
-        m.position.y + (15),
+        p.position.x + (10),
+        p.position.y + (10),
         20,
         30,
         v0,
@@ -258,52 +281,61 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png"]).th
 
   }
 
-  const idleAnim = new PlayerAnimation(rightIdle, leftIdle, 20, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
-  const runAnim = new PlayerAnimation(rightRun, leftRun, 8, true, [[0, 0, 1, 0.2], [0, .2, 1, 0.4], [0, .4, 1, 0.6], [0, .6, 1, 0.8], [0, .8, 1, 1.0]])
-  const ShootingAnim = new PlayerAnimation(rightShoot, leftShoot, 3, false, [[0, 0, 1, 0.25], [0, .25, 1, 0.5], [0, .5, 1, 0.75], [0, .75, 1, 1.0]])
+  const botAnim = new BodyAnimation(rightBot, leftBot, 5, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
+  const idleAnim = new BodyAnimation(rightIdle, leftIdle, 20, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
+  const runAnim = new BodyAnimation(rightRun, leftRun, 8, true, [[0, 0, 1, 0.2], [0, .2, 1, 0.4], [0, .4, 1, 0.6], [0, .6, 1, 0.8], [0, .8, 1, 1.0]])
+  const ShootingAnim = new BodyAnimation(rightShoot, leftShoot, 3, false, [[0, 0, 1, 0.25], [0, .25, 1, 0.5], [0, .5, 1, 0.75], [0, .75, 1, 1.0]])
 
   function update(a: Action, m: Model) {
+    const p = m.player
     switch (a) {
       case EventType.JumpPressed:
-        if (m.position.y == FLOOR) {
-          m.velocity.y = -JUMP_VEL
+        if (p.position.y == FLOOR) {
+          p.velocity.y = -JUMP_VEL
         }
-        m.shooting = false
+        p.shooting = false
         break;
       case EventType.LeftPressed:
-        m.dir = Dir.Left
-        m.velocity.x = -WALK_SPEED
-        m.shooting = false
+        p.dir = Dir.Left
+        p.velocity.x = -WALK_SPEED
+        p.shooting = false
         break;
       case EventType.RightPressed:
-        m.dir = Dir.Right
-        m.velocity.x = WALK_SPEED
-        m.shooting = false
+        p.dir = Dir.Right
+        p.velocity.x = WALK_SPEED
+        p.shooting = false
         break;
       case EventType.LeftReleased:
-        m.velocity.x = 0
+        //  p.velocity.x = 0
         break;
       case EventType.RightReleased:
-        m.velocity.x = 0
+        //  p.velocity.x = 0
         break;
       case EventType.AttackPressed:
-        if (!m.shooting) {
-          m.shooting = true
-          ShootingAnim.reset()
-          m.velocity.x += (m.dir == Dir.Left ? 1.5 : -1.5)
-        } else {
-          m.velocity.x = 0
-          ShootingAnim.reset()
-        }
+
+        ShootingAnim.reset()
+        p.shooting = true
+        p.velocity.x = (p.dir == Dir.Left ? 1.5 : -1.5)
+
         break;
       case EventType.AttackReleased:
-        m.velocity.x = 0
-
+        p.velocity.x = 0
+        p.shooting = false
+        ShootingAnim.reset()
         break;
       default:
         break;
     }
-    move(m)
+    move(m.player)
+    for (var i = 0; i < m.enemies.length; i++) {
+      const e = m.enemies[i]
+      if (e.position.x < 0 || (e.position.x + 20 > width)) {
+        e.velocity.x = e.velocity.x * -1
+        e.dir = e.velocity.x > 0 ? Dir.Left : Dir.Right
+      }
+      move(e)
+    }
+
   }
 
   //canvas.scale(4, 4)
@@ -329,28 +361,37 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png"]).th
     }
   }
 
-  function applyGravity(model: Model) {
-    model.velocity.y = model.position.y < FLOOR ? model.velocity.y + (GRAVITY * currentDelta) : model.velocity.y
+  function applyGravity(b: Body) {
+    b.velocity.y = b.position.y < FLOOR ? b.velocity.y + (GRAVITY * currentDelta) : b.velocity.y
   }
+
   const FLOOR = 192 - 80
-  function move(model: Model): void {
-    applyGravity(model)
-    model.position.x += model.velocity.x * currentDelta
-    model.position.y = Math.min(model.position.y + (model.velocity.y * currentDelta), FLOOR)
+  function move(b: Body): void {
+    applyGravity(b)
+    b.position.x += b.velocity.x * currentDelta
+    b.position.y = Math.min(b.position.y + (b.velocity.y * currentDelta), FLOOR)
   }
 
   const render = (m: Model) => {
+    const p = m.player
     canvas.cls()
     canvas.bkg(0.2, 0.2, 0.2)
     renderFloor()
 
-    if (m.shooting) {
-      ShootingAnim.update(m)
-    } else if (m.velocity.x == 0) {
-      idleAnim.update(m)
+    if (p.shooting) {
+      ShootingAnim.update(p)
+    } else if (p.velocity.x == 0) {
+      idleAnim.update(p)
     } else {
-      runAnim.update(m)
+      runAnim.update(p)
     }
+
+    for (var i = 0; i < m.enemies.length; i++) {
+      const e = m.enemies[i]
+      botAnim.update(e)
+    }
+
+
     canvas.flush();
   }
 
