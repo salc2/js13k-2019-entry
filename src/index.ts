@@ -80,10 +80,13 @@ function getTileIndeces(v: Vector): number {
 }
 
 export function collide(body1: Body, body2: Body): boolean {
-  return body1.position.x < body2.position.x + (body2.width) &&
+  const result = body1.position.x < (body2.position.x + body2.width) &&
     body1.position.x + (body1.width) > body2.position.x &&
     body1.position.y < body2.position.y + body2.height &&
     body1.position.y + body1.height > body2.position.y;
+  console.log(result)
+  console.log(" body1.position.y" + body1.position.y + " body2.position.y" + body2.position.y)
+  return result;
 }
 
 function getMousePos(canvas, evt) {
@@ -331,7 +334,7 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
       canvas.img(
         text.text,
         p.position.x + (p.width / 2),
-        p.position.y - (p.height),
+        p.position.y,
         p.width,
         p.height,
         v0,
@@ -355,7 +358,7 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
     const p = m.player
     switch (a) {
       case EventType.JumpPressed:
-        if (p.position.y == FLOOR) {
+        if (p.position.y == FLOOR - p.height) {
           p.velocity.y = -JUMP_VEL
         }
         p.shooting = false
@@ -385,7 +388,7 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
           const b = m.bullets[i]
           if (!b.visible && gunReady == 0) {
             b.position.x = p.position.x + p.width + b.width
-            b.position.y = p.position.y - (p.height / 1.7)
+            b.position.y = p.position.y + (p.height / 2.4)
             b.velocity.x = p.dir == Dir.Right ? 35 : -35
             b.visible = true
             gunReady = 12
@@ -410,10 +413,11 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
         e.velocity.x = e.velocity.x * -1
         e.dir = e.velocity.x > 0 ? Dir.Left : Dir.Right
       }
-      m.bullets.filter( b => b.visible).forEach(b => {
-        if(collide(b,e)){
-          e.velocity.x = 0
-          e.position.x = 128
+      m.bullets.filter(b => b.visible).forEach(b => {
+        if (collide(b, e)) {
+          e.velocity.x = -WALK_SPEED
+          e.position.x = width - e.width
+          e.dir = Dir.Right
         }
       })
     }
@@ -433,10 +437,10 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
 
   const floorTex = textureFromPixelArray(canvas.g, texDataFloor, canvas.g.RGBA, 20, 20);
   function renderFloor() {
-    for (var y = 0; y < 256; y += 20) {
+    for (var x = 0; x < 256; x += 20) {
       canvas.img(
         floorTex,
-        y,
+        x,
         FLOOR,
         20,
         20,
@@ -449,7 +453,7 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
   }
 
   function applyGravity(b: Body) {
-    b.velocity.y = b.position.y < FLOOR ? b.velocity.y + (GRAVITY * currentDelta) : b.velocity.y
+    b.velocity.y = b.position.y + b.height < FLOOR ? b.velocity.y + (GRAVITY * currentDelta) : b.velocity.y
   }
 
   function outsideScreen(b: Bullet) {
@@ -457,17 +461,17 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
   }
   const FLOOR = height - 40
 
-function moveBullet(b: Bullet): void {
-  if (outsideScreen(b)) {
-    b.visible = false
-    b.velocity.x = 0
+  function moveBullet(b: Bullet): void {
+    if (outsideScreen(b)) {
+      b.visible = false
+      b.velocity.x = 0
+    }
+    b.position.x += b.velocity.x * currentDelta
   }
-  b.position.x += b.velocity.x * currentDelta
-}
 
   function move(b: Body): void {
     applyGravity(b)
-    b.position.y = Math.min(b.position.y + (b.velocity.y * currentDelta), FLOOR)
+    b.position.y = Math.min(b.position.y + (b.velocity.y * currentDelta), FLOOR - b.height)
     b.position.x += b.velocity.x * currentDelta
   }
 
