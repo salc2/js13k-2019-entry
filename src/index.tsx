@@ -1,6 +1,12 @@
 import './lib/tiny-canvas.js';
 import { resolve } from 'url';
 import { rejects } from 'assert';
+import 'fpsmeter';
+
+declare var FPSMeter: any;
+
+const fpsM = new FPSMeter();
+
 declare var TC: any;
 declare var TCTex: any;
 
@@ -8,11 +14,15 @@ interface Vector {
   x: number
   y: number
 }
-
+interface Bullet extends Body {
+}
 interface Body {
   position: Vector
   velocity: Vector
   dir: Dir
+  height: number
+  width: number
+  visible: boolean
 }
 interface Player extends Body {
   shooting: boolean
@@ -23,6 +33,7 @@ interface Enemy extends Body {
 interface State {
   player: Player
   enemies: Enemy[]
+  bullets: Bullet[]
 }
 
 interface BodyTexture {
@@ -49,6 +60,42 @@ enum EventType {
 type Action = EventType
 type Model = State;
 var canvas = TC(document.getElementById('c'))
+interface AABB {
+  lt: Vector
+  rt: Vector
+  rb: Vector
+  lb: Vector
+}
+function getAABB(b: Body): AABB {
+  return {
+    lt: { x: b.position.x, y: b.position.y },
+    rt: { x: b.position.x + b.width, y: b.position.y },
+    rb: { x: b.position.x + b.width, y: b.position.y + b.height },
+    lb: { x: b.position.x, y: b.position.y + b.height }
+  }
+}
+
+function getTileIndeces(v: Vector): number {
+  return Math.floor(v.y / 20 /* tileSize */) * 50 /* worldSize */ + Math.floor(v.x / 20);
+}
+
+export function collide(body1: Body, body2: Body): boolean {
+  return body1.position.x < body2.position.x + (body2.width) &&
+    body1.position.x + (body1.width) > body2.position.x &&
+    body1.position.y < body2.position.y + body2.height &&
+    body1.position.y + body1.height > body2.position.y;
+}
+
+function getMousePos(canvas, evt) {
+  var rect = canvas.getBoundingClientRect();
+  return {
+    x: evt.clientX - rect.left,
+    y: evt.clientY - rect.top
+  };
+}
+canvas.g.canvas.addEventListener("click", (event) => {
+  console.log(getMousePos(canvas.g.canvas, event))
+})
 
 function loadTextures(urls: string[]): Promise<BodyTexture[]> {
   return new Promise((resolver, rejects) => {
@@ -115,20 +162,35 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
     return texture;
   }
 
+  function initBullets(num: number): Bullet[] {
+    const bs: Bullet[] = []
+    for (let i = 0; i < num; i++) {
+      bs.push({ position: { x: 50, y: 50 }, velocity: { x: 0, y: 0 }, visible: false, dir: Dir.Left, width: 4, height: 4 })
+    }
+    return bs
+  }
+
   let currentState: Model = {
     player: {
       position: { x: 128, y: 0.0 },
       velocity: { x: 0.0, y: 0.0 },
       dir: Dir.Right,
-      shooting: false
+      shooting: false,
+      width: 20,
+      height: 20,
+      visible: true
     },
     enemies: [
       {
         position: { x: 128, y: 0.0 },
         velocity: { x: WALK_SPEED, y: 0.0 },
         dir: Dir.Left,
+        width: 20,
+        height: 20,
+        visible: true
       }
-    ]
+    ],
+    bullets: initBullets(10)
   }
   window["state"] = currentState
 
@@ -268,10 +330,10 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
       let text = p.dir == Dir.Right ? rightT : leftT
       canvas.img(
         text.text,
-        p.position.x + (10),
-        p.position.y + (10),
-        20,
-        30,
+        p.position.x + (p.width / 2),
+        p.position.y - (p.height),
+        p.width,
+        p.height,
         v0,
         u0,
         v1,
@@ -285,6 +347,9 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
   const idleAnim = new BodyAnimation(rightIdle, leftIdle, 20, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
   const runAnim = new BodyAnimation(rightRun, leftRun, 8, true, [[0, 0, 1, 0.2], [0, .2, 1, 0.4], [0, .4, 1, 0.6], [0, .6, 1, 0.8], [0, .8, 1, 1.0]])
   const ShootingAnim = new BodyAnimation(rightShoot, leftShoot, 3, false, [[0, 0, 1, 0.25], [0, .25, 1, 0.5], [0, .5, 1, 0.75], [0, .75, 1, 1.0]])
+
+
+  let gunReady: number = 0
 
   function update(a: Action, m: Model) {
     const p = m.player
@@ -306,16 +371,27 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
         p.shooting = false
         break;
       case EventType.LeftReleased:
-        //  p.velocity.x = 0
+        p.velocity.x = 0
         break;
       case EventType.RightReleased:
-        //  p.velocity.x = 0
+        p.velocity.x = 0
         break;
       case EventType.AttackPressed:
-
         ShootingAnim.reset()
         p.shooting = true
         p.velocity.x = (p.dir == Dir.Left ? 1.5 : -1.5)
+
+        for (var i = 0; i < m.bullets.length; i++) {
+          const b = m.bullets[i]
+          if (!b.visible && gunReady == 0) {
+            b.position.x = p.position.x + p.width + b.width
+            b.position.y = p.position.y - (p.height / 1.7)
+            b.velocity.x = p.dir == Dir.Right ? 35 : -35
+            b.visible = true
+            gunReady = 12
+            break;
+          }
+        }
 
         break;
       case EventType.AttackReleased:
@@ -329,28 +405,39 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
     move(m.player)
     for (var i = 0; i < m.enemies.length; i++) {
       const e = m.enemies[i]
+      move(e)
       if (e.position.x < 0 || (e.position.x + 20 > width)) {
         e.velocity.x = e.velocity.x * -1
         e.dir = e.velocity.x > 0 ? Dir.Left : Dir.Right
       }
-      move(e)
+      m.bullets.filter( b => b.visible).forEach(b => {
+        if(collide(b,e)){
+          e.velocity.x = 0
+          e.position.x = 128
+        }
+      })
+    }
+    for (var i = 0; i < m.bullets.length; i++) {
+      const b = m.bullets[i]
+      moveBullet(b)
     }
 
+    gunReady = Math.max(0, gunReady - 1);
   }
 
   //canvas.scale(4, 4)
-  let texData = []
-  for (var i = 0; i < 20 * 20 * 3; i++) {
-    texData[i] = 0.5
+  let texDataFloor = []
+  for (var i = 0; i < 20 * 20 * 4; i++) {
+    texDataFloor[i] = 1.0
   }
 
-  const floorTex = textureFromPixelArray(canvas.g, texData, canvas.g.RGB, 20, 20);
+  const floorTex = textureFromPixelArray(canvas.g, texDataFloor, canvas.g.RGBA, 20, 20);
   function renderFloor() {
     for (var y = 0; y < 256; y += 20) {
       canvas.img(
         floorTex,
         y,
-        192 - 40,
+        FLOOR,
         20,
         20,
         0,
@@ -365,11 +452,23 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
     b.velocity.y = b.position.y < FLOOR ? b.velocity.y + (GRAVITY * currentDelta) : b.velocity.y
   }
 
-  const FLOOR = 192 - 80
+  function outsideScreen(b: Bullet) {
+    return b.position.x < 0 || b.position.x > width
+  }
+  const FLOOR = height - 40
+
+function moveBullet(b: Bullet): void {
+  if (outsideScreen(b)) {
+    b.visible = false
+    b.velocity.x = 0
+  }
+  b.position.x += b.velocity.x * currentDelta
+}
+
   function move(b: Body): void {
     applyGravity(b)
-    b.position.x += b.velocity.x * currentDelta
     b.position.y = Math.min(b.position.y + (b.velocity.y * currentDelta), FLOOR)
+    b.position.x += b.velocity.x * currentDelta
   }
 
   const render = (m: Model) => {
@@ -391,8 +490,25 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
       botAnim.update(e)
     }
 
+    for (var i = 0; i < m.bullets.length; i++) {
+      const b = m.bullets[i]
+      if (b.visible) {
+        canvas.img(
+          floorTex,
+          b.position.x,
+          b.position.y,
+          4,
+          4,
+          0,
+          0,
+          1,
+          1
+        );
+      }
+    }
 
     canvas.flush();
+    fpsM.tick()
   }
 
   /*  */if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
