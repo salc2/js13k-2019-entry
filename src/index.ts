@@ -1,10 +1,12 @@
 import './lib/tiny-canvas.js';
-import './lib/gunsound.js';
+import './lib/sounds.js';
 import { resolve } from 'url';
 import { rejects } from 'assert';
 import 'fpsmeter';
 
 declare var fireSound: any;
+declare var jumpSound: any;
+declare var hitSound: any;
 
 declare var FPSMeter: any;
 
@@ -361,6 +363,7 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
       case EventType.JumpPressed:
         if (p.position.y == FLOOR - p.height) {
           p.velocity.y = -JUMP_VEL
+          jumpSound()
         }
         p.shooting = false
         break;
@@ -401,8 +404,8 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
         break;
       case EventType.AttackReleased:
         p.velocity.x = 0
-        p.shooting = false
-        ShootingAnim.reset()
+        //p.shooting = false
+        //ShootingAnim.reset()
         break;
       default:
         break;
@@ -422,6 +425,7 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
           e.dir = Dir.Right
           b.visible = false
           b.velocity.x = 0
+          hitSound()
         }
       })
     }
