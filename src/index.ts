@@ -1,7 +1,10 @@
 import './lib/tiny-canvas.js';
+import './lib/gunsound.js';
 import { resolve } from 'url';
 import { rejects } from 'assert';
 import 'fpsmeter';
+
+declare var fireSound: any;
 
 declare var FPSMeter: any;
 
@@ -84,8 +87,6 @@ export function collide(body1: Body, body2: Body): boolean {
     body1.position.x + (body1.width) > body2.position.x &&
     body1.position.y < body2.position.y + body2.height &&
     body1.position.y + body1.height > body2.position.y;
-  console.log(result)
-  console.log(" body1.position.y" + body1.position.y + " body2.position.y" + body2.position.y)
   return result;
 }
 
@@ -392,6 +393,7 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
             b.velocity.x = p.dir == Dir.Right ? 35 : -35
             b.visible = true
             gunReady = 12
+            fireSound()
             break;
           }
         }
@@ -418,6 +420,8 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
           e.velocity.x = -WALK_SPEED
           e.position.x = width - e.width
           e.dir = Dir.Right
+          b.visible = false
+          b.velocity.x = 0
         }
       })
     }
