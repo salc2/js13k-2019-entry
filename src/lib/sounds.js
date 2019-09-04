@@ -88,14 +88,15 @@ v.gain.setValueAtTime(0,ctx.currentTime)
 var std2 = false
 
 function jumpSound(){
+  const r = (Math.random() * (3 - 1) + 1)/2
   if(!std2){
       o.start(0)
     std2 = true
   }
-  o.frequency.setValueAtTime(200, ctx.currentTime)
+  o.frequency.setValueAtTime(200*r, ctx.currentTime)
   v.gain.setValueAtTime(0.1,ctx.currentTime)
-  v.gain.exponentialRampToValueAtTime(1.0, ctx.currentTime + 0.1);
-  o.frequency.exponentialRampToValueAtTime(280, ctx.currentTime + 0.4);
+  v.gain.exponentialRampToValueAtTime(0.6, ctx.currentTime + 0.1);
+  o.frequency.exponentialRampToValueAtTime(280*r, ctx.currentTime + 0.4);
   v.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
   v.gain.setValueAtTime(0,ctx.currentTime + 0.4)
 }
