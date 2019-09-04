@@ -41,7 +41,7 @@ interface State {
   bullets: Bullet[]
 }
 
-interface BodyTexture {
+interface ImgTexture {
   width: number
   height: number
   text: WebGLTexture
@@ -103,10 +103,11 @@ canvas.g.canvas.addEventListener("click", (event) => {
   console.log(getMousePos(canvas.g.canvas, event))
 })
 
-function loadTextures(urls: string[]): Promise<BodyTexture[]> {
+function loadTextures(urls: string[]): Promise<ImgTexture[]> {
   return new Promise((resolver, rejects) => {
-    let result: BodyTexture[] = new Array<BodyTexture>();
+    let result: ImgTexture[] = new Array<ImgTexture>();
 
+    var i = 0
     urls.forEach((url, index) => {
       const img = new Image
       img.src = url
@@ -131,22 +132,21 @@ function loadTextures(urls: string[]): Promise<BodyTexture[]> {
           height: img.height,
           text: TCTex(canvas.g, g.canvas, img.width, img.height) as WebGLTexture
         }
-        const i = index * 2
-        result[i] = tex1
-        result[i + 1] = tex2
-
+        
+        result[i++] = tex1
+        result[i++] = tex2
         if (index == urls.length - 1) {
           setTimeout(() => {
             resolver(result)
-          }, 400)
+          }, 1000)
         }
       }
     })
   })
 }
 
-loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bot.png"]).then((textures) => {
-  const [rightRun, leftRun, rightIdle, leftIdle, rightShoot, leftShoot, rightBot, leftBot] = textures
+loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bot.png"]).then((textures) => {
+  const [rMountain,lMountain,rightFloor,leftFloor, rightRun, leftRun, rightIdle, leftIdle, rightShoot, leftShoot, rightBot, leftBot] = textures
 
   let currentDelta = 0.0
   let currentTime = 0.0
@@ -307,8 +307,8 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
   window.addEventListener('keyup', handlerKBUp, true);
 
   function BodyAnimation(
-    rightT: BodyTexture,
-    leftT: BodyTexture,
+    rightT: ImgTexture,
+    leftT: ImgTexture,
     ticksPerFrame: number,
     loop: boolean,
     frames: number[][]) {
@@ -422,6 +422,7 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
         if (collide(b, e)) {
           e.velocity.x = -WALK_SPEED
           e.position.x = width - e.width
+          e.position.y = 120
           e.dir = Dir.Right
           b.visible = false
           b.velocity.x = 0
@@ -444,14 +445,37 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
   }
 
   const floorTex = textureFromPixelArray(canvas.g, texDataFloor, canvas.g.RGBA, 20, 20);
-  function renderFloor() {
-    for (var x = 0; x < 256; x += 20) {
+
+
+  function renderMountain() {
+    canvas.push()
+    canvas.scale(6,6)
+    for (var x = 0; x < 100; x += 20) {
       canvas.img(
-        floorTex,
+        lMountain.text,
         x,
-        FLOOR,
-        20,
-        20,
+        5,
+        lMountain.width,
+        lMountain.height,
+        0,
+        0,
+        1,
+        1
+      );
+    }
+      canvas.pop()
+  }
+
+  function renderFloor() {
+    
+    for (var x = 0; x < 300; x += 20) {
+      const text = x % 7 == 0 ? leftFloor : rightFloor
+      canvas.img(
+        text.text,
+        x,
+        FLOOR-10,
+        text.width,
+        text.height,
         0,
         0,
         1,
@@ -467,7 +491,7 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
   function outsideScreen(b: Bullet) {
     return b.position.x < 0 || b.position.x > width
   }
-  const FLOOR = height - 40
+  const FLOOR = height - 10
 
   function moveBullet(b: Bullet): void {
     if (outsideScreen(b)) {
@@ -484,9 +508,16 @@ loadTextures(["soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bo
   }
 
   const render = (m: Model) => {
+    canvas.g.canvas.style.width = "auto";
+    canvas.g.canvas.style.height =  Math.round(window.innerHeight*0.95) + "px" ;
+    canvas.g.viewport(0, 0, canvas.g.canvas.width, canvas.g.canvas.height);
+    renderMountain()
+
+
+
     const p = m.player
     canvas.cls()
-    canvas.bkg(0.2, 0.2, 0.2)
+    canvas.bkg(57/255,73/255,81/255)
     renderFloor()
 
     if (p.shooting) {
