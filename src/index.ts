@@ -107,7 +107,6 @@ function loadTextures(urls: string[]): Promise<ImgTexture[]> {
   return new Promise((resolver, rejects) => {
     let result: ImgTexture[] = new Array<ImgTexture>();
 
-    var i = 0
     urls.forEach((url, index) => {
       const img = new Image
       img.src = url
@@ -133,8 +132,9 @@ function loadTextures(urls: string[]): Promise<ImgTexture[]> {
           text: TCTex(canvas.g, g.canvas, img.width, img.height) as WebGLTexture
         }
         
+        var i = index*2;
         result[i++] = tex1
-        result[i++] = tex2
+        result[i] = tex2
         if (index == urls.length - 1) {
           setTimeout(() => {
             resolver(result)
