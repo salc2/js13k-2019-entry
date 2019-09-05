@@ -356,12 +356,16 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
 
 
   let gunReady: number = 0
-
+  let jumpTries:number = 2
   function update(a: Action, m: Model) {
     const p = m.player
+    if (p.position.y == FLOOR - p.height) {
+      jumpTries = 2
+    }
     switch (a) {
       case EventType.JumpPressed:
-        if (p.position.y == FLOOR - p.height) {
+        if(jumpTries > 0){
+          jumpTries--
           p.velocity.y = -JUMP_VEL
           jumpSound()
         }
