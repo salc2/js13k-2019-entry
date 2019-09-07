@@ -92,17 +92,6 @@ export function collide(body1: Body, body2: Body): boolean {
   return result;
 }
 
-function getMousePos(canvas, evt) {
-  var rect = canvas.getBoundingClientRect();
-  return {
-    x: evt.clientX - rect.left,
-    y: evt.clientY - rect.top
-  };
-}
-canvas.g.canvas.addEventListener("click", (event) => {
-  console.log(getMousePos(canvas.g.canvas, event))
-})
-
 function loadTextures(urls: string[]): Promise<ImgTexture[]> {
   return new Promise((resolver, rejects) => {
     let result: ImgTexture[] = new Array<ImgTexture>();
@@ -168,6 +157,14 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     return texture;
   }
 
+
+  function getMousePos(canvas, evt) {
+    var rect = canvas.getBoundingClientRect();
+    return {
+      x: (evt.clientX - rect.left)*0.3,
+      y: (evt.clientY - rect.top) * 0.15
+    };
+  }
   function initBullets(num: number): Bullet[] {
     const bs: Bullet[] = []
     for (let i = 0; i < num; i++) {
@@ -175,6 +172,24 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     }
     return bs
   }
+
+  function newEnemy(x: number, y:number, vel: number): Enemy {
+    return {
+      position: { x: x, y: y },
+      velocity: { x: vel, y: 0.0 },
+      dir: Dir.Left,
+      width: 20,
+      height: 20,
+      visible: true
+    }
+  }
+
+  canvas.g.canvas.addEventListener("click", (event) => {
+    const pos = getMousePos(canvas.g.canvas, event)
+    console.log(pos)
+ //   const vel = WALK_SPEED * (Math.random() * (3 - 1) + 1)/2 
+  //  window["state"].enemies.push(newEnemy(pos.x,pos.y, vel))
+  })
 
   let currentState: Model = {
     player: {
@@ -186,18 +201,14 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
       height: 20,
       visible: true
     },
-    enemies: [
-      {
-        position: { x: 128, y: 0.0 },
-        velocity: { x: WALK_SPEED, y: 0.0 },
-        dir: Dir.Left,
-        width: 20,
-        height: 20,
-        visible: true
-      }
-    ],
+    enemies: [newEnemy(34,24,WALK_SPEED)],
     bullets: initBullets(10)
   }
+  const FLOOR = height - 10
+  const SECOND_FLOOR = FLOOR/2
+
+  const secondFloorBody: Body = {position:{x:0.0, y: SECOND_FLOOR},width: 60, height: 20,dir: Dir.Left,velocity:{x:0,y:0},visible: true}
+
   window["state"] = currentState
 
   const keepAnimation = (time: number) => {
@@ -349,6 +360,10 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
 
   }
 
+  function isOverFloor(b: Body): boolean{
+    return b.position.y + b.height == FLOOR || collideFloorBottom(b,secondFloorBody);
+  }
+
   const botAnim = new BodyAnimation(rightBot, leftBot, 5, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
   const idleAnim = new BodyAnimation(rightIdle, leftIdle, 20, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
   const runAnim = new BodyAnimation(rightRun, leftRun, 8, true, [[0, 0, 1, 0.2], [0, .2, 1, 0.4], [0, .4, 1, 0.6], [0, .6, 1, 0.8], [0, .8, 1, 1.0]])
@@ -359,7 +374,7 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
   let jumpTries:number = 2
   function update(a: Action, m: Model) {
     const p = m.player
-    if (p.position.y == FLOOR - p.height) {
+    if (isOverFloor(p)) {
       jumpTries = 2
     }
     switch (a) {
@@ -424,13 +439,13 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
       }
       m.bullets.filter(b => b.visible).forEach(b => {
         if (collide(b, e)) {
+          hitSound()
           e.velocity.x = -WALK_SPEED
           e.position.x = width - e.width
           e.position.y = 120
           e.dir = Dir.Right
           b.visible = false
           b.velocity.x = 0
-          hitSound()
         }
       })
     }
@@ -471,9 +486,25 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
   }
 
   function renderFloor() {
+
+    for (var x = secondFloorBody.position.x; x <= secondFloorBody.position.x+secondFloorBody.width ; x += 20) {
+    const text = x % 7 == 0 ? leftFloor : rightFloor
+    canvas.img(
+      text.text,
+      x,
+      secondFloorBody.position.y,
+      text.width,
+      text.height,
+      0,
+      0,
+      1,
+      1
+    );
+    }
     
     for (var x = 0; x < 300; x += 20) {
       const text = x % 7 == 0 ? leftFloor : rightFloor
+
       canvas.img(
         text.text,
         x,
@@ -485,17 +516,21 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
         1,
         1
       );
+
     }
   }
 
+  function isNotOnFloor(b: Body): boolean{
+    return b.position.y + b.height < FLOOR
+  }
+
   function applyGravity(b: Body) {
-    b.velocity.y = b.position.y + b.height < FLOOR ? b.velocity.y + (GRAVITY * currentDelta) : b.velocity.y
+    b.velocity.y = isNotOnFloor(b) && !collideFloorBottom(b,secondFloorBody) ? b.velocity.y + (GRAVITY * currentDelta) : b.velocity.y
   }
 
   function outsideScreen(b: Bullet) {
     return b.position.x < 0 || b.position.x > width
   }
-  const FLOOR = height - 10
 
   function moveBullet(b: Bullet): void {
     if (outsideScreen(b)) {
@@ -505,10 +540,50 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     b.position.x += b.velocity.x * currentDelta
   }
 
+  function collideFloorTop(b: Body, f: Body): boolean {
+   return collide(b,f) &&
+    f.position.y+f.height > b.position.y
+  }
+  function collideFloorBottom(b: Body, f: Body): boolean {
+    return collide(b,f) &&
+    b.position.y < f.position.y
+   }
+
+   function playerCollideLeft(b: Body): boolean {
+    return collide(b,secondFloorBody) &&
+    b.position.x < secondFloorBody.position.x+secondFloorBody.width
+   }
+   function playerCollideRight(b: Body): boolean {
+    return collide(b,secondFloorBody) &&
+    b.position.x+b.width > secondFloorBody.position.x
+   }
+
   function move(b: Body): void {
-    applyGravity(b)
     b.position.y = Math.min(b.position.y + (b.velocity.y * currentDelta), FLOOR - b.height)
     b.position.x += b.velocity.x * currentDelta
+    applyGravity(b)
+
+    if(collideFloorTop(b,secondFloorBody)){
+      if(b.velocity.y < 0){
+        b.velocity.y = 0
+      }
+    }
+
+    if(collideFloorBottom(b,secondFloorBody)){
+      if(b.velocity.y > 0){
+        b.velocity.y = 0
+      }
+    }
+/*     if(playerCollideLeft(b)){
+      if(b.velocity.x < 0){
+        b.velocity.x = 0
+      }
+    }
+    if(playerCollideRight(b)){
+      if(b.velocity.x > 0){
+        b.velocity.x = 0
+      }
+    } */
   }
 
   const render = (m: Model) => {
@@ -516,8 +591,6 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     canvas.g.canvas.style.height =  Math.round(window.innerHeight*0.95) + "px" ;
     canvas.g.viewport(0, 0, canvas.g.canvas.width, canvas.g.canvas.height);
     renderMountain()
-
-
 
     const p = m.player
     canvas.cls()
