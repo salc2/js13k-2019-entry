@@ -7,10 +7,9 @@ import 'fpsmeter';
 declare var fireSound: any;
 declare var jumpSound: any;
 declare var hitSound: any;
-
 declare var FPSMeter: any;
 
-//const fpsM = new FPSMeter();
+const fpsM = new FPSMeter();
 
 declare var TC: any;
 declare var TCTex: any;
@@ -71,6 +70,16 @@ interface AABB {
   rb: Vector
   lb: Vector
 }
+
+function rdnAngle(): number{
+  const v = (Math.random() * (125-0) + 0)/1000
+  if(Math.random() >= 0.5){
+      return (2-v) * Math.PI 
+  }else{
+      return v * Math.PI
+  }
+}
+
 function getAABB(b: Body): AABB {
   return {
     lt: { x: b.position.x, y: b.position.y },
@@ -221,9 +230,9 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     currentDelta = (time - startTime) / 100;
     currentTime = time
     startTime = time;
-
-    update(currentAction, currentState)
+    
     render(currentState)
+    update(currentAction, currentState)
     currentAction = null
     id = requestAnimationFrame(keepAnimation);
   };
@@ -375,8 +384,7 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
   const botAnim = new BodyAnimation(rightBot, leftBot, 5, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
   const idleAnim = new BodyAnimation(rightIdle, leftIdle, 20, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
   const runAnim = new BodyAnimation(rightRun, leftRun, 8, true, [[0, 0, 1, 0.2], [0, .2, 1, 0.4], [0, .4, 1, 0.6], [0, .6, 1, 0.8], [0, .8, 1, 1.0]])
-  const ShootingAnim = new BodyAnimation(rightShoot, leftShoot, 3, false, [[0, 0, 1, 0.25], [0, .25, 1, 0.5], [0, .5, 1, 0.75], [0, .75, 1, 1.0]])
-
+  const shootingAnim = new BodyAnimation(rightShoot, leftShoot, 3, false, [[0, 0, 1, 0.25], [0, .25, 1, 0.5], [0, .5, 1, 0.75], [0, .75, 1, 1.0]])
 
   let gunReady: number = 0
   let jumpTries:number = 2
@@ -411,18 +419,20 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
         p.velocity.x = 0
         break;
       case EventType.AttackPressed:
-        ShootingAnim.reset()
+        shootingAnim.reset()
         p.shooting = true
         p.velocity.x = (p.dir == Dir.Left ? 1.5 : -1.5)
 
         for (var i = 0; i < m.bullets.length; i++) {
           const b = m.bullets[i]
           if (!b.visible && gunReady == 0) {
+            const angle = rdnAngle()
             b.position.x = p.position.x + p.width + b.width
             b.position.y = p.position.y + (p.height / 2.4)
-            b.velocity.x = p.dir == Dir.Right ? 35 : -35
+            b.velocity.x = (p.dir == Dir.Right ? 35 : -35) * Math.cos(angle)
+            b.velocity.y = 5 * Math.sin(angle)
             b.visible = true
-            gunReady = 12
+            gunReady = 8
             fireSound()
             break;
           }
@@ -557,6 +567,7 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
       b.velocity.x = 0
     }
     b.position.x += b.velocity.x * currentDelta
+    b.position.y += b.velocity.y * currentDelta
   }
 
   function collideFloorTop(b: Body, f: Body): boolean {
@@ -610,7 +621,7 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     renderFloor()
 
     if (p.shooting) {
-      ShootingAnim.update(p)
+      shootingAnim.update(p)
     } else if (p.velocity.x == 0) {
       idleAnim.update(p)
     } else {
@@ -640,7 +651,7 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     }
 
     canvas.flush();
-   // fpsM.tick()
+    fpsM.tick()
   }
 
   /*  */if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
@@ -648,7 +659,6 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     svgs.forEach(svg => {
       svg.style.display = "block";
     });
-    /*  */
   }
 
 
