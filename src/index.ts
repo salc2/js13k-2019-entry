@@ -10,7 +10,7 @@ declare var hitSound: any;
 
 declare var FPSMeter: any;
 
-const fpsM = new FPSMeter();
+//const fpsM = new FPSMeter();
 
 declare var TC: any;
 declare var TCTex: any;
@@ -134,8 +134,22 @@ function loadTextures(urls: string[]): Promise<ImgTexture[]> {
   })
 }
 
+function createBulletTexture(){
+  const g = document.createElement("canvas").getContext("2d")
+  g.canvas.width = 4
+  g.canvas.height = 4
+  g.clearRect(0, 0, canvas.width, canvas.height);
+  g.fillStyle = '#ff6';
+  g.beginPath();
+  g.arc(2, 2, 2, 0, 2 * Math.PI);
+  g.fill()
+  return TCTex(canvas.g, g.canvas, 4, 4) as WebGLTexture
+}
+
 loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bot.png"]).then((textures) => {
   const [rMountain,lMountain,rightFloor,leftFloor, rightRun, leftRun, rightIdle, leftIdle, rightShoot, leftShoot, rightBot, leftBot] = textures
+
+  const bulletTexture = createBulletTexture()
 
   let currentDelta = 0.0
   let currentTime = 0.0
@@ -147,16 +161,6 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
   let startTime = 0;
   let id = 0;
   const [width, height] = [canvas.g.canvas.width, canvas.g.canvas.height]
-
-  function textureFromPixelArray(gl, dataArray, type, width, height) {
-    var dataTypedArray = new Uint8Array(dataArray); // Don't need to do this if the data is already in a typed array
-    var texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, type, width, height, 0, type, gl.UNSIGNED_BYTE, dataTypedArray);
-    // Other texture setup here, like filter modes and mipmap generation
-    return texture;
-  }
-
 
   function getMousePos(canvas, evt) {
     var rect = canvas.getBoundingClientRect();
@@ -205,7 +209,7 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     bullets: initBullets(10)
   }
   const FLOOR = height - 10
-  const SECOND_FLOOR = FLOOR/2
+  const SECOND_FLOOR = FLOOR * 0.7
 
   const secondFloorBody: Body = {position:{x:0.0, y: SECOND_FLOOR},width: 60, height: 20,dir: Dir.Left,velocity:{x:0,y:0},visible: true}
   const secondFloorBodySeg2: Body = {position:{x:190.0, y: SECOND_FLOOR},width: 100, height: 20,dir: Dir.Left,velocity:{x:0,y:0},visible: true}
@@ -272,12 +276,6 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     rec.addEventListener("touchstart", handlerStart, psOp);
     rec.addEventListener("touchend", handlerEnd, psOp);
   });
-
-
-  /*   svgs.forEach(rec => {
-      rec.removeEventListener("touchstart", handlerStart, psOp);
-      rec.removeEventListener("touchend", handlerEnd, psOp);
-    }) */
 
   const handlerKBDown = (e: KeyboardEvent) => {
     switch (e.keyCode) {
@@ -473,9 +471,6 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     texDataFloor[i] = 1.0
   }
 
-  const floorTex = textureFromPixelArray(canvas.g, texDataFloor, canvas.g.RGBA, 20, 20);
-
-
   function renderMountain() {
     canvas.push()
     canvas.scale(6,6)
@@ -573,13 +568,13 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     b.position.y < f.position.y
    }
 
-   function playerCollideLeft(b: Body): boolean {
-    return collide(b,secondFloorBody) &&
-    b.position.x < secondFloorBody.position.x+secondFloorBody.width
+   function collideFloorLeft(b: Body,f: Body): boolean {
+    return collide(b,f) &&
+    b.position.x < f.position.x && b.position.x+b.width > f.position.x
    }
-   function playerCollideRight(b: Body): boolean {
-    return collide(b,secondFloorBody) &&
-    b.position.x+b.width > secondFloorBody.position.x
+   function collideFloorRight(b: Body,f: Body): boolean {
+    return collide(b,f) &&
+    b.position.x+(b.width*0.9) < f.position.x && b.velocity.x > 0
    }
 
   function move(b: Body): void {
@@ -601,17 +596,6 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
       }
     }
 
-
-/*     if(playerCollideLeft(b)){
-      if(b.velocity.x < 0){
-        b.velocity.x = 0
-      }
-    }
-    if(playerCollideRight(b)){
-      if(b.velocity.x > 0){
-        b.velocity.x = 0
-      }
-    } */
   }
 
   const render = (m: Model) => {
@@ -642,7 +626,7 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
       const b = m.bullets[i]
       if (b.visible) {
         canvas.img(
-          floorTex,
+          bulletTexture,
           b.position.x,
           b.position.y,
           4,
@@ -656,7 +640,7 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     }
 
     canvas.flush();
-    fpsM.tick()
+   // fpsM.tick()
   }
 
   /*  */if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
