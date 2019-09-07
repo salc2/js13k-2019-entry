@@ -18,6 +18,14 @@ interface Vector {
   x: number
   y: number
 }
+interface Camera{
+  position: Vector
+  width: number
+  height: number
+  maxX: number
+  maxY: number
+}
+
 interface Bullet extends Body {
 }
 interface Body {
@@ -221,6 +229,9 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
     enemies: [newEnemy(34,24,WALK_SPEED)],
     bullets: initBullets(10)
   }
+
+  const cam: Camera = {position:{x:0,y:0},width:300,height: 150, maxX:0,maxY:0}
+  window["cam"] = cam
   const FLOOR = height - 10
   const SECOND_FLOOR = FLOOR * 0.7
 
@@ -228,7 +239,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
   const secondFloorBodySeg2: Body = {position:{x:190.0, y: SECOND_FLOOR},width: 100, height: 20,dir: Dir.Left,velocity:{x:0,y:0},visible: true}
   const floors = [secondFloorBody,secondFloorBodySeg2]
 
-  window["state"] = currentState
+  
 
   const keepAnimation = (time: number) => {
     currentDelta = (time - startTime) / 100;
@@ -360,8 +371,8 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
       let text = p.dir == Dir.Right ? rightT : leftT
       canvas.img(
         text.text,
-        p.position.x + (p.width / 2),
-        p.position.y,
+        -cam.position.x+(p.position.x + (p.width / 2)),
+        -cam.position.y+p.position.y,
         p.width,
         p.height,
         v0,
@@ -521,8 +532,8 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
       const text = x % 7 == 0 ? leftFloor : rightFloor
       canvas.img(
         text.text,
-        x,
-        secondFloorBodySeg2.position.y-10,
+        -cam.position.x+x,
+        -cam.position.y+(secondFloorBodySeg2.position.y-10),
         text.width,
         text.height,
         0,
@@ -536,8 +547,8 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
     const text = x % 7 == 0 ? leftFloor : rightFloor
     canvas.img(
       text.text,
-      x,
-      secondFloorBody.position.y-10,
+      -cam.position.x+x,
+      -cam.position.y+(secondFloorBody.position.y-10),
       text.width,
       text.height,
       0,
@@ -552,8 +563,8 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
 
       canvas.img(
         text.text,
-        x,
-        FLOOR-10,
+        -cam.position.x+x,
+        -cam.position.y+(FLOOR-10),
         text.width,
         text.height,
         0,
@@ -660,8 +671,8 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
       if (b.visible) {
         canvas.img(
           bulletTexture,
-          b.position.x,
-          b.position.y,
+          -cam.position.x+b.position.x,
+          -cam.position.y+b.position.y,
           4,
           4,
           0,
