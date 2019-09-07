@@ -208,6 +208,8 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
   const SECOND_FLOOR = FLOOR/2
 
   const secondFloorBody: Body = {position:{x:0.0, y: SECOND_FLOOR},width: 60, height: 20,dir: Dir.Left,velocity:{x:0,y:0},visible: true}
+  const secondFloorBodySeg2: Body = {position:{x:190.0, y: SECOND_FLOOR},width: 100, height: 20,dir: Dir.Left,velocity:{x:0,y:0},visible: true}
+  const floors = [secondFloorBody,secondFloorBodySeg2]
 
   window["state"] = currentState
 
@@ -360,8 +362,16 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
 
   }
 
-  function isOverFloor(b: Body): boolean{
+/*   function isOverFloor(b: Body): boolean{
     return b.position.y + b.height == FLOOR || collideFloorBottom(b,secondFloorBody);
+  }
+ */
+  function isOverFloor(b: Body): boolean{
+    let floorBottoms: boolean = false;
+    for(var i=0;i<floors.length;i++){
+      floorBottoms = floorBottoms || collideFloorBottom(b,floors[i])
+    }
+    return b.position.y + b.height == FLOOR || floorBottoms;
   }
 
   const botAnim = new BodyAnimation(rightBot, leftBot, 5, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
@@ -486,13 +496,27 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
   }
 
   function renderFloor() {
+    for (var x = secondFloorBodySeg2.position.x; x <= secondFloorBodySeg2.position.x+secondFloorBodySeg2.width ; x += 20) {
+      const text = x % 7 == 0 ? leftFloor : rightFloor
+      canvas.img(
+        text.text,
+        x,
+        secondFloorBodySeg2.position.y-10,
+        text.width,
+        text.height,
+        0,
+        0,
+        1,
+        1
+      );
+      }
 
     for (var x = secondFloorBody.position.x; x <= secondFloorBody.position.x+secondFloorBody.width ; x += 20) {
     const text = x % 7 == 0 ? leftFloor : rightFloor
     canvas.img(
       text.text,
       x,
-      secondFloorBody.position.y,
+      secondFloorBody.position.y-10,
       text.width,
       text.height,
       0,
@@ -542,7 +566,7 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
 
   function collideFloorTop(b: Body, f: Body): boolean {
    return collide(b,f) &&
-    f.position.y+f.height > b.position.y
+    f.position.y+(f.height/2) > b.position.y
   }
   function collideFloorBottom(b: Body, f: Body): boolean {
     return collide(b,f) &&
@@ -563,17 +587,21 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     b.position.x += b.velocity.x * currentDelta
     applyGravity(b)
 
-    if(collideFloorTop(b,secondFloorBody)){
-      if(b.velocity.y < 0){
-        b.velocity.y = 0
+    for(var f =0; f< floors.length; f++){
+
+      if(collideFloorTop(b,floors[f])){
+        if(b.velocity.y < 0){
+          b.velocity.y = 0
+        }
+      }
+      if(collideFloorBottom(b,floors[f])){
+        if(b.velocity.y > 0){
+          b.velocity.y = 0
+        }
       }
     }
 
-    if(collideFloorBottom(b,secondFloorBody)){
-      if(b.velocity.y > 0){
-        b.velocity.y = 0
-      }
-    }
+
 /*     if(playerCollideLeft(b)){
       if(b.velocity.x < 0){
         b.velocity.x = 0
