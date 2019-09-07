@@ -32,6 +32,8 @@ interface Player extends Body {
   shooting: boolean
 }
 interface Enemy extends Body {
+  life: number
+  hitted: boolean
 }
 
 interface State {
@@ -155,8 +157,8 @@ function createBulletTexture(){
   return TCTex(canvas.g, g.canvas, 4, 4) as WebGLTexture
 }
 
-loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bot.png"]).then((textures) => {
-  const [rMountain,lMountain,rightFloor,leftFloor, rightRun, leftRun, rightIdle, leftIdle, rightShoot, leftShoot, rightBot, leftBot] = textures
+loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bot.png"]).then((textures) => {
+  const [rbotHit,lbotHit,rMountain,lMountain,rightFloor,leftFloor, rightRun, leftRun, rightIdle, leftIdle, rightShoot, leftShoot, rightBot, leftBot] = textures
 
   const bulletTexture = createBulletTexture()
 
@@ -193,7 +195,9 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
       dir: Dir.Left,
       width: 20,
       height: 20,
-      visible: true
+      visible: true,
+      hitted: false,
+      life: 5
     }
   }
 
@@ -381,6 +385,7 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     return b.position.y + b.height == FLOOR || floorBottoms;
   }
 
+  const botHittedAnim = new BodyAnimation(rbotHit, lbotHit, 2, true, [[0, 0, 1, 1]])
   const botAnim = new BodyAnimation(rightBot, leftBot, 5, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
   const idleAnim = new BodyAnimation(rightIdle, leftIdle, 20, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
   const runAnim = new BodyAnimation(rightRun, leftRun, 8, true, [[0, 0, 1, 0.2], [0, .2, 1, 0.4], [0, .4, 1, 0.6], [0, .6, 1, 0.8], [0, .8, 1, 1.0]])
@@ -388,6 +393,7 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
 
   let gunReady: number = 0
   let jumpTries:number = 2
+  let ticksHitted: number = 0
   function update(a: Action, m: Model) {
     const p = m.player
     if (isOverFloor(p)) {
@@ -450,18 +456,28 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
     move(m.player)
     for (var i = 0; i < m.enemies.length; i++) {
       const e = m.enemies[i]
+      ticksHitted = Math.max(ticksHitted-1,0)
+      if(ticksHitted == 0){
+        e.hitted = false
+      }
       move(e)
       if (e.position.x < 0 || (e.position.x + 20 > width)) {
         e.velocity.x = e.velocity.x * -1
         e.dir = e.velocity.x > 0 ? Dir.Left : Dir.Right
       }
       m.bullets.filter(b => b.visible).forEach(b => {
-        if (collide(b, e)) {
+        if (e.visible && collide(b, e)) {
           hitSound()
-          e.velocity.x = -WALK_SPEED
-          e.position.x = width - e.width
-          e.position.y = 120
-          e.dir = Dir.Right
+          e.hitted = true
+          ticksHitted = 8
+          e.position.x += (b.velocity.x > 0 ? + 8 : -8)
+
+          if(e.life == 0){
+            e.visible = false
+            e.velocity.x = 0
+          }else{
+            e.life = Math.max(e.life-1,0)
+          }
           b.visible = false
           b.velocity.x = 0
         }
@@ -630,7 +646,13 @@ loadTextures(["mountain.png","floor.png", "soldier_run.png", "soldier_idle.png",
 
     for (var i = 0; i < m.enemies.length; i++) {
       const e = m.enemies[i]
-      botAnim.update(e)
+      if(e.visible){
+        if(e.hitted){
+          botHittedAnim.update(e)
+        }else{
+          botAnim.update(e)
+        }
+      }
     }
 
     for (var i = 0; i < m.bullets.length; i++) {
