@@ -209,6 +209,23 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
     }
   }
 
+  const cam: Camera = {position:{x:0,y:0},width:300,height: 150, maxX:0,maxY:0}
+  window["cam"] = cam
+
+  let camCenter = cam.position
+  let radioToShake = 0
+  let shake = false
+
+  function shaking(){
+    const x = 0, y = 0
+    const ang = Math.random() % Math.PI * 2
+    const nx = Math.sin(ang) * radioToShake
+    const ny = Math.cos(ang) * radioToShake
+    cam.position.x = x + nx
+    cam.position.y = y + ny
+    radioToShake *= 0.9
+  }
+
   canvas.g.canvas.addEventListener("click", (event) => {
     const pos = getMousePos(canvas.g.canvas, event)
     console.log(pos)
@@ -230,8 +247,6 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
     bullets: initBullets(10)
   }
 
-  const cam: Camera = {position:{x:0,y:0},width:300,height: 150, maxX:0,maxY:0}
-  window["cam"] = cam
   const FLOOR = height - 10
   const SECOND_FLOOR = FLOOR * 0.7
 
@@ -406,6 +421,9 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
   let jumpTries:number = 2
   let ticksHitted: number = 0
   function update(a: Action, m: Model) {
+    if(radioToShake > 0.0002){
+      shaking()
+    }
     const p = m.player
     if (isOverFloor(p)) {
       jumpTries = 2
@@ -451,6 +469,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
             b.visible = true
             gunReady = 8
             fireSound()
+            radioToShake = 2
             break;
           }
         }
