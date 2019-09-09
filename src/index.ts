@@ -219,7 +219,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
   function newEnemies(x: number, y:number, n: number): Enemy []{
     const es = []
     for(var i=0;  i< n; i++){
-      es.push(newEnemy(x,y,WALK_SPEED* rnd() * (4-2) + 2))
+      es.push(newEnemy(x,y,WALK_SPEED* rnd() * (2.9-1.5) + 1.5))
     }
     return  es
   }
@@ -277,17 +277,19 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
       height: 20,
       visible: true
     },
-    enemies: newEnemies(34,24,5),
+    enemies: newEnemies(34,0,5),
     bullets: initBullets(10)
   }
 
   const FLOOR = height - 10
   const SECOND_FLOOR = FLOOR * 0.7
 
-  const secondFloorBody: Body = {position:{x:40.0, y: SECOND_FLOOR},width: 100, height: 20,dir: Dir.Left,velocity:{x:0,y:0},visible: true}
-  const secondFloorBodySeg2: Body = {position:{x:230.0, y: SECOND_FLOOR},width: 260, height: 20,dir: Dir.Left,velocity:{x:0,y:0},visible: true}
-  const floors = [secondFloorBody,secondFloorBodySeg2]
 
+  function createFloor(x:number, y:number, width: number): Body {
+    return {position:{x:x, y: y},width: width, height: 20,dir: Dir.Left,velocity:{x:0,y:0},visible: true}
+  }
+
+  const floors = [createFloor(0.0,FLOOR,900), createFloor(40.0,SECOND_FLOOR,100),createFloor(230.0,SECOND_FLOOR,290)]
 
   const keepAnimation = (time: number) => {
     currentDelta = (time - startTime) / 100;
@@ -524,7 +526,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
         e.hitted = false
       }
       move(e)
-      if (e.position.x < 0 || (e.position.x + 20 > width)) {
+      if (e.position.x < 0 || (e.position.x + 20 > 900)) {
         e.velocity.x = e.velocity.x * -1
         e.dir = e.velocity.x > 0 ? Dir.Left : Dir.Right
       }
@@ -555,9 +557,12 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
       const p = particles[i]
       move(p)
 
-      if(!isNotOnFloor(p) || collideFloorBottom(p,secondFloorBody) || collideFloorBottom(p,secondFloorBodySeg2) ){
-        persistence.push(particles[i])        
-        particles.splice(i, 1)
+
+      for(var f=0; f<floors.length;f++){
+        if(collideFloorBottom(p,floors[f])){
+          persistence.push(particles[i])        
+          particles.splice(i, 1)
+        }
       }
     }
 
@@ -594,64 +599,39 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
   }
 
   function renderFloor() {
-    for (var x = secondFloorBodySeg2.position.x; x <= secondFloorBodySeg2.position.x+secondFloorBodySeg2.width ; x += 20) {
-      const text = x % 7 == 0 ? leftFloor : rightFloor
-      canvas.img(
-        text.text,
-        -cam.position.x+x,
-        -cam.position.y+(secondFloorBodySeg2.position.y-10),
-        text.width,
-        text.height,
-        0,
-        0,
-        1,
-        1
-      );
+      for(var f=0; f<floors.length;f++){
+        const floor = floors[f]
+        for (var x = floor.position.x; x <= floor.position.x+floor.width ; x += 20) {
+          const text = x % 7 == 0 ? leftFloor : rightFloor
+          canvas.img(
+            text.text,
+            -cam.position.x+x,
+            -cam.position.y+(floor.position.y-10),
+            text.width,
+            text.height,
+            0,
+            0,
+            1,
+            1
+          );
+          }
       }
-
-    for (var x = secondFloorBody.position.x; x <= secondFloorBody.position.x+secondFloorBody.width ; x += 20) {
-    const text = x % 7 == 0 ? leftFloor : rightFloor
-    canvas.img(
-      text.text,
-      -cam.position.x+x,
-      -cam.position.y+(secondFloorBody.position.y-10),
-      text.width,
-      text.height,
-      0,
-      0,
-      1,
-      1
-    );
-    }
-    
-    for (var x = 0; x < 300; x += 20) {
-      const text = x % 7 == 0 ? leftFloor : rightFloor
-
-      canvas.img(
-        text.text,
-        -cam.position.x+x,
-        -cam.position.y+(FLOOR-10),
-        text.width,
-        text.height,
-        0,
-        0,
-        1,
-        1
-      );
-
-    }
   }
 
-  function isNotOnFloor(b: Body): boolean{
-    return b.position.y + b.height < FLOOR
+  function ifOnTheFloorgetY(b: Body): number{
+    let bottomCollide: number = -1
+    for(var i = 0;i< floors.length;i++){
+       bottomCollide = collideFloorBottom(b,floors[i]) ? floors[i].position.y : -1 
+    }
+    return bottomCollide;
   }
 
   function applyGravity(b: Body) {
-    b.velocity.y = isNotOnFloor(b) && !collideFloorBottom(b,secondFloorBody) && !collideFloorBottom(b,secondFloorBodySeg2) ? b.velocity.y + (GRAVITY * currentDelta) : b.velocity.y
+    b.velocity.y =  ifOnTheFloorgetY(b) < 0 ? b.velocity.y + (GRAVITY * currentDelta) : b.velocity.y
   }
 
   function outsideScreen(b: Bullet) {
-    return b.position.x < 0 || b.position.x > width
+    return b.position.x < 0 || b.position.x > 900
   }
 
   function moveBullet(b: Bullet): void {
@@ -682,7 +662,8 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
    }
 
   function move(b: Body): void {
-    b.position.y = Math.min(b.position.y + (b.velocity.y * currentDelta), FLOOR - b.height)
+    const groundY = ifOnTheFloorgetY(b)
+    b.position.y = groundY < 0 ? b.position.y + (b.velocity.y * currentDelta) : groundY - b.height
     b.position.x += b.velocity.x * currentDelta
     applyGravity(b)
 
