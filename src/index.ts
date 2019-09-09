@@ -212,8 +212,15 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
       height: 20,
       visible: true,
       hitted: false,
-      life: 5
+      life: 3
     }
+  }
+  function newEnemies(x: number, y:number, n: number): Enemy []{
+    const es = []
+    for(var i=0;  i< n; i++){
+      es.push(newEnemy(x,y,WALK_SPEED* Math.random() * (3-1) + 1))
+    }
+    return  es
   }
 
   const cam: Camera = {position:{x:0,y:0},width:300,height: 150, maxX:0,maxY:0}
@@ -269,7 +276,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
       height: 20,
       visible: true
     },
-    enemies: [newEnemy(34,24,WALK_SPEED)],
+    enemies: newEnemies(34,24,5),
     bullets: initBullets(10)
   }
 
