@@ -496,7 +496,8 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png","mountain.png","f
       case EventType.JP:
         if(jumpTries > 0){
           jumpTries--
-          p.velocity.y = -JUMP_VEL
+          
+          p.velocity.y = p.carring ? -JUMP_VEL/2 : -JUMP_VEL
           jumpSound()
         }
         p.shooting = false
@@ -621,12 +622,6 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png","mountain.png","f
   }
   function moveCam(b: Body): void{
     cam.position.x = Math.max(b.position.x - (cam.width/2),0)
-  }
-
-  //canvas.scale(4, 4)
-  let texDataFloor = []
-  for (var i = 0; i < 20 * 20 * 4; i++) {
-    texDataFloor[i] = 1.0
   }
 
   function renderMountain() {
