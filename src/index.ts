@@ -26,6 +26,9 @@ interface Camera{
   maxY: number
 }
 
+interface Particle extends Body{
+}
+
 interface Bullet extends Body {
 }
 interface Body {
@@ -181,6 +184,10 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
   let id = 0;
   const [width, height] = [canvas.g.canvas.width, canvas.g.canvas.height]
 
+
+  let particles: Particle[] = []
+  let persistence: Particle[] = []
+
   function getMousePos(canvas, evt) {
     var rect = canvas.getBoundingClientRect();
     return {
@@ -228,10 +235,29 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
 
   canvas.g.canvas.addEventListener("click", (event) => {
     const pos = getMousePos(canvas.g.canvas, event)
-    console.log(pos)
- //   const vel = WALK_SPEED * (Math.random() * (3 - 1) + 1)/2 
-  //  window["state"].enemies.push(newEnemy(pos.x,pos.y, vel))
+/*     var rnd = Math.random
+    const sp = WALK_SPEED*2
+    const jp = JUMP_VEL*4
+		for (var i = 0; i < 10; i++) {
+			const vx = rnd() * (sp - (-sp)) + (-sp)
+			const vy = rnd() * (jp - (-jp)) + (-jp)
+			var angle = rnd() * Math.PI * 2;
+		//	particles.push(Particle(pos.x, pos.y, vx * Math.cos(angle), vy * Math.sin(angle)))
+			particles.push({position: {x: pos.x,y:pos.y},velocity:{x: vx * Math.cos(angle), y:vy * Math.sin(angle)},dir:Dir.Left,height:4,width:4,visible:true})
+		} */
   })
+
+  function explodeParticles(x: number, y: number): void{
+    var rnd = Math.random
+    const sp = WALK_SPEED*2
+    const jp = JUMP_VEL*3
+		for (var i = 0; i < 10; i++) {
+			const vx = rnd() * (sp - (-sp)) + (-sp)
+			const vy = rnd() * (jp - (-jp)) + (-jp)
+			var angle = rnd() * Math.PI * 2;
+			particles.push({position: {x: x,y:y},velocity:{x: vx * Math.cos(angle), y:vy * Math.sin(angle)},dir:Dir.Left,height:4,width:4,visible:true})
+		}
+  }
 
   let currentState: Model = {
     player: {
@@ -501,8 +527,9 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
           e.hitted = true
           ticksHitted = 8
           e.position.x += (b.velocity.x > 0 ? + 8 : -8)
-
           if(e.life == 0){
+            radioToShake = 4
+            explodeParticles(e.position.x+(e.width/2),e.position.y+(e.height/2))
             e.visible = false
             e.velocity.x = 0
           }else{
@@ -516,6 +543,15 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
     for (var i = 0; i < m.bullets.length; i++) {
       const b = m.bullets[i]
       moveBullet(b)
+    }
+    for (var i = 0; i < particles.length; i++) {
+      const p = particles[i]
+      move(p)
+
+      if(!isNotOnFloor(p) || collideFloorBottom(p,secondFloorBody) || collideFloorBottom(p,secondFloorBodySeg2) ){
+        persistence.push(particles[i])        
+        particles.splice(i, 1)
+      }
     }
 
     gunReady = Math.max(0, gunReady - 1);
@@ -533,8 +569,8 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
     for (var x = 0; x < 100; x += 20) {
       canvas.img(
         lMountain.text,
-        x,
-        5,
+       (-cam.position.x*0.06) + x,
+       (-cam.position.y*0.06) + 5,
         lMountain.width,
         lMountain.height,
         0,
@@ -600,7 +636,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
   }
 
   function applyGravity(b: Body) {
-    b.velocity.y = isNotOnFloor(b) && !collideFloorBottom(b,secondFloorBody) ? b.velocity.y + (GRAVITY * currentDelta) : b.velocity.y
+    b.velocity.y = isNotOnFloor(b) && !collideFloorBottom(b,secondFloorBody) && !collideFloorBottom(b,secondFloorBodySeg2) ? b.velocity.y + (GRAVITY * currentDelta) : b.velocity.y
   }
 
   function outsideScreen(b: Bullet) {
@@ -700,6 +736,41 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
           1
         );
       }
+    }
+
+
+    for (var i = 0; i < particles.length; i++) {
+      const p = particles[i]
+        if(p.visible){
+          canvas.img(
+            rbotHit.text,
+            -cam.position.x+p.position.x,
+            -cam.position.y+p.position.y,
+            8,
+            8,
+            0,
+            0,
+            .7,
+            1
+          );
+        }
+    }
+
+    for (var i = 0; i < persistence.length; i++) {
+      const p = persistence[i]
+        if(p.visible){
+          canvas.img(
+            rbotHit.text,
+            -cam.position.x+p.position.x,
+            -cam.position.y+p.position.y,
+            8,
+            8,
+            0,
+            0,
+            .7,
+            1
+          );
+        }
     }
 
     canvas.flush();
