@@ -2,14 +2,14 @@ import './lib/tiny-canvas.js';
 import './lib/sounds.js';
 import { resolve } from 'url';
 import { rejects } from 'assert';
-//import 'fpsmeter';
+import 'fpsmeter';
 
 declare var fireSound: any;
 declare var jumpSound: any;
 declare var hitSound: any;
 declare var FPSMeter: any;
 
-//const fpsM = new FPSMeter();
+const fpsM = new FPSMeter();
 
 declare var TC: any;
 declare var TCTex: any;
@@ -211,15 +211,15 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
       dir: Dir.Left,
       width: 20,
       height: 20,
-      visible: true,
+      visible: false,
       hitted: false,
-      life: 3
+      life: 5
     }
   }
   function newEnemies(x: number, y:number, n: number): Enemy []{
     const es = []
     for(var i=0;  i< n; i++){
-      es.push(newEnemy(x,y,WALK_SPEED* rnd() * (2.9-1.5) + 1.5))
+      es.push(newEnemy(x,y,WALK_SPEED* rnd() * (3.9-1.7) + 1.7))
     }
     return  es
   }
@@ -242,17 +242,22 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
   }
 
   canvas.g.canvas.addEventListener("click", (event) => {
+    let take = 1
     const pos = getMousePos(canvas.g.canvas, event)
-/*     var rnd = Math.random
-    const sp = WALK_SPEED*2
-    const jp = JUMP_VEL*4
-		for (var i = 0; i < 10; i++) {
-			const vx = rnd() * (sp - (-sp)) + (-sp)
-			const vy = rnd() * (jp - (-jp)) + (-jp)
-			var angle = rnd() * Math.PI * 2;
-		//	particles.push(Particle(pos.x, pos.y, vx * Math.cos(angle), vy * Math.sin(angle)))
-			particles.push({position: {x: pos.x,y:pos.y},velocity:{x: vx * Math.cos(angle), y:vy * Math.sin(angle)},dir:Dir.Left,height:4,width:4,visible:true})
-		} */
+    for(var i = 0; i < currentState.enemies.length; i++){
+      const ene = currentState.enemies[i]
+      if(!ene.visible && take > 0){
+        ene.position.x = cam.position.x+pos.x
+        ene.position.y = cam.position.y+pos.y
+        ene.visible = true
+        ene.visible = true
+        ene.life = 5
+        ene.velocity.x =  rnd() * (3.9-1.7) + 1.7  * ( currentState.player.position.x > ene.position.x ?
+        WALK_SPEED : -WALK_SPEED)
+        ene.dir = ene.velocity.x > 0 ? Dir.Left : Dir.Right
+        take --
+      }
+    }
   })
 
   function explodeParticles(x: number, y: number): void{
@@ -277,8 +282,8 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
       height: 20,
       visible: true
     },
-    enemies: newEnemies(34,0,5),
-    bullets: initBullets(10)
+    enemies: newEnemies(34,0,50),
+    bullets: initBullets(60)
   }
 
   const FLOOR = height - 10
@@ -502,7 +507,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
             b.velocity.x = (p.dir == Dir.Right ? 35 : -35) * Math.cos(angle)
             b.velocity.y = 5 * Math.sin(angle)
             b.visible = true
-            gunReady = 8
+            gunReady = 3
             fireSound()
             radioToShake = 2
             break;
@@ -530,8 +535,9 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
         e.velocity.x = e.velocity.x * -1
         e.dir = e.velocity.x > 0 ? Dir.Left : Dir.Right
       }
-      m.bullets.filter(b => b.visible).forEach(b => {
-        if (e.visible && collide(b, e)) {
+      for(var j = 0;j< m.bullets.length;j++){
+        const b = m.bullets[j]
+        if (e.visible && b.visible && collide(b, e)) {
           hitSound()
           e.hitted = true
           ticksHitted = 8
@@ -547,7 +553,8 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
           b.visible = false
           b.velocity.x = 0
         }
-      })
+      }
+      
     }
     for (var i = 0; i < m.bullets.length; i++) {
       const b = m.bullets[i]
@@ -766,7 +773,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
     }
 
     canvas.flush();
-    //fpsM.tick()
+    fpsM.tick()
   }
 
   /*  */if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
