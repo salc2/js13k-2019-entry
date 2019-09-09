@@ -42,6 +42,7 @@ interface Body {
 }
 interface Player extends Body {
   shooting: boolean
+  carring?: Body
 }
 interface Enemy extends Body {
   life: number
@@ -51,7 +52,8 @@ interface Enemy extends Body {
 interface State {
   player: Player
   enemies: Enemy[]
-  bullets: Bullet[]
+  bullets: Bullet[],
+  hostages: Body[]
 }
 
 interface ImgTexture {
@@ -169,8 +171,8 @@ function createBulletTexture(){
   return TCTex(canvas.g, g.canvas, 4, 4) as WebGLTexture
 }
 
-loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bot.png"]).then((textures) => {
-  const [rbotHit,lbotHit,rMountain,lMountain,rightFloor,leftFloor, rightRun, leftRun, rightIdle, leftIdle, rightShoot, leftShoot, rightBot, leftBot] = textures
+loadTextures(["soldier_host.png","hostage.png","bothitted.png","mountain.png","floor.png", "soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bot.png"]).then((textures) => {
+  const [rSolHost,lSolHost,rHost,lHost,rbotHit,lbotHit,rMountain,lMountain,rightFloor,leftFloor, rightRun, leftRun, rightIdle, leftIdle, rightShoot, leftShoot, rightBot, leftBot] = textures
 
   const bulletTexture = createBulletTexture()
 
@@ -203,6 +205,15 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
     }
     return bs
   }
+
+  function initHosta(num: number): Body[] {
+    const bs: Body[] = []
+    for (let i = 0; i < num; i++) {
+      bs.push({ position: { x: 50, y: 50 }, velocity: { x: 0, y: 0 }, visible: true, dir: Dir.Left, width: 16, height: 16 })
+    }
+    return bs
+  }
+
 
   function newEnemy(x: number, y:number, vel: number): Enemy {
     return {
@@ -240,8 +251,17 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
     cam.position.y = y + ny
     radioToShake *= 0.9
   }
-
   canvas.g.canvas.addEventListener("click", (event) => {
+    const pos = getMousePos(canvas.g.canvas, event)
+    for(var i = 0; i < currentState.hostages.length; i++){
+      const host = currentState.hostages[i]
+        host.position.x = cam.position.x+pos.x
+        host.position.y = cam.position.y+pos.y
+        host.visible = true
+    }
+  })
+
+/*   canvas.g.canvas.addEventListener("click", (event) => {
     let take = 1
     const pos = getMousePos(canvas.g.canvas, event)
     for(var i = 0; i < currentState.enemies.length; i++){
@@ -258,7 +278,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
         take --
       }
     }
-  })
+  }) */
 
   function explodeParticles(x: number, y: number): void{
     var rnd = Math.random
@@ -283,7 +303,8 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
       visible: true
     },
     enemies: newEnemies(34,0,50),
-    bullets: initBullets(60)
+    bullets: initBullets(60),
+    hostages: initHosta(1)
   }
 
   const FLOOR = height - 10
@@ -450,10 +471,13 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
     }
     return b.position.y + b.height == FLOOR || floorBottoms;
   }
-
+  
   const botHittedAnim = new BodyAnimation(rbotHit, lbotHit, 2, true, [[0, 0, 1, 1]])
   const botAnim = new BodyAnimation(rightBot, leftBot, 5, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
+  const ONETHIRD = 1/3 
+  const soldierHostAni = new BodyAnimation(rSolHost, lSolHost, 14, false, [[0, 0, 1, ONETHIRD], [0, ONETHIRD, 1, ONETHIRD*2],[0, ONETHIRD*2, 1, 1]])
   const idleAnim = new BodyAnimation(rightIdle, leftIdle, 20, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
+  const hostAnim = new BodyAnimation(rHost, lHost, 20, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
   const runAnim = new BodyAnimation(rightRun, leftRun, 8, true, [[0, 0, 1, 0.2], [0, .2, 1, 0.4], [0, .4, 1, 0.6], [0, .6, 1, 0.8], [0, .8, 1, 1.0]])
   const shootingAnim = new BodyAnimation(rightShoot, leftShoot, 3, false, [[0, 0, 1, 0.25], [0, .25, 1, 0.5], [0, .5, 1, 0.75], [0, .75, 1, 1.0]])
 
@@ -479,12 +503,12 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
         break;
       case EventType.LP:
         p.dir = Dir.Left
-        p.velocity.x = -WALK_SPEED
+        p.velocity.x = p.carring ? -WALK_SPEED/2 : -WALK_SPEED
         p.shooting = false
         break;
       case EventType.RP:
         p.dir = Dir.Right
-        p.velocity.x = WALK_SPEED
+        p.velocity.x = p.carring ? WALK_SPEED/2 : WALK_SPEED
         p.shooting = false
         break;
       case EventType.LR:
@@ -494,6 +518,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
         p.velocity.x = 0
         break;
       case EventType.AP:
+        if(!m.player.carring){
         shootingAnim.reset()
         p.shooting = true
         p.velocity.x = (p.dir == Dir.Left ? 1.5 : -1.5)
@@ -513,6 +538,13 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
             break;
           }
         }
+      }else{
+        let host = m.player.carring
+        host.visible = true
+        host.position.x = m.player.dir == Dir.Left ? m.player.position.x - 25 : m.player.position.x + 25
+        host.position.y = m.player.position.y - 10
+        m.player.carring = null
+      }
 
         break;
       case EventType.AR:
@@ -523,7 +555,18 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
       default:
         break;
     }
-    move(m.player)
+    
+
+     move(m.player)
+
+    for (var i = 0; i < m.hostages.length; i++) {
+      const h = m.hostages[i]
+      move(h)
+      if(h.visible && collide(m.player,h) && !m.player.carring){
+        h.visible = false
+        m.player.carring = h
+      }
+    }
     for (var i = 0; i < m.enemies.length; i++) {
       const e = m.enemies[i]
       ticksHitted = Math.max(ticksHitted-1,0)
@@ -704,9 +747,18 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
     if (p.shooting) {
       shootingAnim.update(p)
     } else if (p.velocity.x == 0) {
+      if(p.carring){
+       soldierHostAni.update(p)
+      }else{
       idleAnim.update(p)
+      }
     } else {
-      runAnim.update(p)
+      if(p.carring){
+        soldierHostAni.reset()
+        soldierHostAni.update(p)
+       }else{
+        runAnim.update(p)
+       }
     }
 
     for (var i = 0; i < m.enemies.length; i++) {
@@ -734,6 +786,13 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
           1,
           1
         );
+      }
+    }
+
+    for (var i = 0; i < m.hostages.length; i++) {
+      const b = m.hostages[i]
+      if (b.visible) {
+        hostAnim.update(b)
       }
     }
 
