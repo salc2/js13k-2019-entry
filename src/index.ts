@@ -533,7 +533,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
           hitSound()
           e.hitted = true
           ticksHitted = 8
-          e.position.x += (b.velocity.x > 0 ? + 8 : -8)
+          e.position.x += (b.velocity.x > 0 ? + 18 : -18)
           if(e.life == 0){
             radioToShake = 4
             explodeParticles(e.position.x+(e.width/2),e.position.y+(e.height/2))
