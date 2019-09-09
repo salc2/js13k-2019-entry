@@ -2,17 +2,18 @@ import './lib/tiny-canvas.js';
 import './lib/sounds.js';
 import { resolve } from 'url';
 import { rejects } from 'assert';
-import 'fpsmeter';
+//import 'fpsmeter';
 
 declare var fireSound: any;
 declare var jumpSound: any;
 declare var hitSound: any;
 declare var FPSMeter: any;
 
-const fpsM = new FPSMeter();
+//const fpsM = new FPSMeter();
 
 declare var TC: any;
 declare var TCTex: any;
+let rnd: () => number = Math.random
 
 interface Vector {
   x: number
@@ -64,14 +65,14 @@ enum Dir {
 }
 
 enum EventType {
-  RightPressed,
-  LeftReleased,
-  RightReleased,
-  LeftPressed,
-  JumpPressed,
-  UsePressed,
-  AttackPressed,
-  AttackReleased
+  RP,
+  LR,
+  RR,
+  LP,
+  JP,
+  UP,
+  AP,
+  AR
 }
 
 type Action = EventType
@@ -85,8 +86,8 @@ interface AABB {
 }
 
 function rdnAngle(): number{
-  const v = (Math.random() * (125-0) + 0)/1000
-  if(Math.random() >= 0.5){
+  const v = (rnd() * (125-0) + 0)/1000
+  if(rnd() >= 0.5){
       return (2-v) * Math.PI 
   }else{
       return v * Math.PI
@@ -218,7 +219,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
   function newEnemies(x: number, y:number, n: number): Enemy []{
     const es = []
     for(var i=0;  i< n; i++){
-      es.push(newEnemy(x,y,WALK_SPEED* Math.random() * (3-1) + 1))
+      es.push(newEnemy(x,y,WALK_SPEED* rnd() * (4-2) + 2))
     }
     return  es
   }
@@ -232,7 +233,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
 
   function shaking(){
     const x = 0, y = 0
-    const ang = Math.random() % Math.PI * 2
+    const ang = rnd() % Math.PI * 2
     const nx = Math.sin(ang) * radioToShake
     const ny = Math.cos(ang) * radioToShake
     cam.position.x = x + nx
@@ -283,11 +284,10 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
   const FLOOR = height - 10
   const SECOND_FLOOR = FLOOR * 0.7
 
-  const secondFloorBody: Body = {position:{x:0.0, y: SECOND_FLOOR},width: 60, height: 20,dir: Dir.Left,velocity:{x:0,y:0},visible: true}
-  const secondFloorBodySeg2: Body = {position:{x:190.0, y: SECOND_FLOOR},width: 100, height: 20,dir: Dir.Left,velocity:{x:0,y:0},visible: true}
+  const secondFloorBody: Body = {position:{x:40.0, y: SECOND_FLOOR},width: 100, height: 20,dir: Dir.Left,velocity:{x:0,y:0},visible: true}
+  const secondFloorBodySeg2: Body = {position:{x:230.0, y: SECOND_FLOOR},width: 260, height: 20,dir: Dir.Left,velocity:{x:0,y:0},visible: true}
   const floors = [secondFloorBody,secondFloorBodySeg2]
 
-  
 
   const keepAnimation = (time: number) => {
     currentDelta = (time - startTime) / 100;
@@ -308,16 +308,16 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
   const handlerStart = (ev: TouchEvent) => {
     switch (ev.currentTarget['id']) {
       case "a":
-        currentAction = EventType.JumpPressed
+        currentAction = EventType.JP
         break;
       case "b":
-        currentAction = EventType.AttackPressed
+        currentAction = EventType.AP
         break;
       case "left":
-        currentAction = EventType.LeftPressed
+        currentAction = EventType.LP
         break;
       case "right":
-        currentAction = EventType.RightPressed
+        currentAction = EventType.RP
         break;
 
       default:
@@ -328,13 +328,13 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
   const handlerEnd = (ev: TouchEvent) => {
     switch (ev.currentTarget['id']) {
       case "b":
-        currentAction = EventType.AttackReleased
+        currentAction = EventType.AR
         break;
       case "left":
-        currentAction = EventType.LeftReleased
+        currentAction = EventType.LR
         break;
       case "right":
-        currentAction = EventType.RightReleased
+        currentAction = EventType.RR
         break;
       default:
         // code...
@@ -352,19 +352,19 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
   const handlerKBDown = (e: KeyboardEvent) => {
     switch (e.keyCode) {
       case 37:
-        currentAction = EventType.LeftPressed
+        currentAction = EventType.LP
         break;
       case 39:
-        currentAction = EventType.RightPressed
+        currentAction = EventType.RP
         break;
       case 38:
-        currentAction = EventType.JumpPressed
+        currentAction = EventType.JP
         break;
       case 13:
-        currentAction = EventType.UsePressed
+        currentAction = EventType.UP
         break;
       case 32:
-        currentAction = EventType.AttackPressed
+        currentAction = EventType.AP
         break;
       default:
         break;
@@ -375,13 +375,13 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
   const handlerKBUp = (e: KeyboardEvent) => {
     switch (e.keyCode) {
       case 37:
-        currentAction = EventType.LeftReleased
+        currentAction = EventType.LR
         break;
       case 39:
-        currentAction = EventType.RightReleased
+        currentAction = EventType.RR
         break;
       case 32:
-        currentAction = EventType.AttackReleased
+        currentAction = EventType.AR
         break;
       default:
         break;
@@ -462,7 +462,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
       jumpTries = 2
     }
     switch (a) {
-      case EventType.JumpPressed:
+      case EventType.JP:
         if(jumpTries > 0){
           jumpTries--
           p.velocity.y = -JUMP_VEL
@@ -470,23 +470,23 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
         }
         p.shooting = false
         break;
-      case EventType.LeftPressed:
+      case EventType.LP:
         p.dir = Dir.Left
         p.velocity.x = -WALK_SPEED
         p.shooting = false
         break;
-      case EventType.RightPressed:
+      case EventType.RP:
         p.dir = Dir.Right
         p.velocity.x = WALK_SPEED
         p.shooting = false
         break;
-      case EventType.LeftReleased:
+      case EventType.LR:
         p.velocity.x = 0
         break;
-      case EventType.RightReleased:
+      case EventType.RR:
         p.velocity.x = 0
         break;
-      case EventType.AttackPressed:
+      case EventType.AP:
         shootingAnim.reset()
         p.shooting = true
         p.velocity.x = (p.dir == Dir.Left ? 1.5 : -1.5)
@@ -508,7 +508,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
         }
 
         break;
-      case EventType.AttackReleased:
+      case EventType.AR:
         p.velocity.x = 0
         //p.shooting = false
         //ShootingAnim.reset()
@@ -562,6 +562,10 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
     }
 
     gunReady = Math.max(0, gunReady - 1);
+    moveCam(m.player)
+  }
+  function moveCam(b: Body): void{
+    cam.position.x = Math.max(b.position.x - (cam.width/2),0)
   }
 
   //canvas.scale(4, 4)
@@ -781,7 +785,7 @@ loadTextures(["bothitted.png","mountain.png","floor.png", "soldier_run.png", "so
     }
 
     canvas.flush();
-    fpsM.tick()
+    //fpsM.tick()
   }
 
   /*  */if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
