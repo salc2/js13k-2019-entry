@@ -94,7 +94,7 @@ function jumpSound(){
     std2 = true
   }
   o.frequency.setValueAtTime(200*r, ctx.currentTime)
-  v.gain.setValueAtTime(0.1,ctx.currentTime)
+  v.gain.setValueAtTime(0.05,ctx.currentTime)
   v.gain.exponentialRampToValueAtTime(0.6, ctx.currentTime + 0.1);
   o.frequency.exponentialRampToValueAtTime(280*r, ctx.currentTime + 0.4);
   v.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
@@ -118,9 +118,31 @@ function hitSound(){
 }
 
 
+var oC = ctx.createOscillator();
+oC.type = 'square'
+var vC = ctx.createGain();
+oC.connect(vC)
+vC.connect(ctx.destination);
+vC.gain.setValueAtTime(0,ctx.currentTime)
+var stdC = false
+
+function coinSound(){
+  if(!stdC){
+      oC.start(0)
+    stdC = true
+  }
+  oC.frequency.setValueAtTime(1800, ctx.currentTime)
+vC.gain.setValueAtTime(0.005,ctx.currentTime)
+vC.gain.exponentialRampToValueAtTime(0.05, ctx.currentTime + 0.1);
+oC.frequency.exponentialRampToValueAtTime(1800, ctx.currentTime + 0.4);
+vC.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+vC.gain.setValueAtTime(0,ctx.currentTime + 0.4)
+}
+
 window['fireSound'] = fireSound;
 window['jumpSound'] = jumpSound;
 window['hitSound'] = hitSound;
+window['coinSound'] = coinSound;
 
 
 

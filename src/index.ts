@@ -7,6 +7,7 @@ import 'fpsmeter';
 declare var fireSound: any;
 declare var jumpSound: any;
 declare var hitSound: any;
+declare var coinSound: any;
 declare var FPSMeter: any;
 
 const fpsM = new FPSMeter();
@@ -185,12 +186,15 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
   let currentAction: Action = null
   const GRAVITY = 10
 
+  let score = 0
+  let addScore = 0
+  let toNextScore = 10
+
   const JUMP_VEL = 30
   const WALK_SPEED = 6
   let startTime = 0;
   let id = 0;
   const [width, height] = [canvas.g.canvas.width, canvas.g.canvas.height]
-
 
   let particles: Particle[] = []
   let persistence: Particle[] = []
@@ -213,7 +217,7 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
   function initHosta(num: number): Body[] {
     const bs: Body[] = []
     for (let i = 0; i < num; i++) {
-      bs.push({ position: { x: 50, y: 50 }, velocity: { x: 0, y: 0 }, visible: true, dir: Dir.Left, width: 16, height: 16 })
+      bs.push({ position: { x: 250, y: 0 }, velocity: { x: 0, y: 0 }, visible: true, dir: Dir.Left, width: 16, height: 16 })
     }
     return bs
   }
@@ -255,7 +259,7 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
     cam.position.y = y + ny
     radioToShake *= 0.9
   }
-  canvas.g.canvas.addEventListener("click", (event) => {
+/*   canvas.g.canvas.addEventListener("click", (event) => {
     const pos = getMousePos(canvas.g.canvas, event)
     for(var i = 0; i < currentState.hostages.length; i++){
       const host = currentState.hostages[i]
@@ -263,9 +267,9 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
         host.position.y = cam.position.y+pos.y
         host.visible = true
     }
-  })
+  }) */
 
-/*   canvas.g.canvas.addEventListener("click", (event) => {
+  canvas.g.canvas.addEventListener("click", (event) => {
     let take = 1
     const pos = getMousePos(canvas.g.canvas, event)
     for(var i = 0; i < currentState.enemies.length; i++){
@@ -282,7 +286,7 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
         take --
       }
     }
-  }) */
+  })
 
   function explodeParticles(x: number, y: number): void{
     var rnd = Math.random
@@ -313,13 +317,14 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
 
   const FLOOR = height - 10
   const SECOND_FLOOR = FLOOR * 0.7
+  const zone: Body = { position: { x: 50, y: FLOOR }, velocity: { x: 0, y: 0 }, visible: true, dir: Dir.Left, width: 150, height: 20 }
 
 
   function createFloor(x:number, y:number, width: number): Body {
     return {position:{x:x, y: y},width: width, height: 20,dir: Dir.Left,velocity:{x:0,y:0},visible: true}
   }
 
-  const floors = [createFloor(0.0,FLOOR,900), createFloor(40.0,SECOND_FLOOR,100),createFloor(230.0,SECOND_FLOOR,290)]
+  const floors = [createFloor(0.0,FLOOR,900), createFloor(200.0,SECOND_FLOOR,260),createFloor(300.0,SECOND_FLOOR,360)]
 
   const keepAnimation = (time: number) => {
     currentDelta = (time - startTime) / 100;
@@ -571,6 +576,10 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
         h.visible = false
         m.player.carring = h
       }
+      if(h.visible && collide(h,zone)){
+        addScore += 500
+        h.visible = false
+      }
     }
     for (var i = 0; i < m.enemies.length; i++) {
       const e = m.enemies[i]
@@ -595,6 +604,8 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
             explodeParticles(e.position.x+(e.width/2),e.position.y+(e.height/2))
             e.visible = false
             e.velocity.x = 0
+            addScore += 100
+
           }else{
             e.life = Math.max(e.life-1,0)
           }
@@ -623,6 +634,17 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
 
     gunReady = Math.max(0, gunReady - 1);
     moveCam(m.player)
+
+    if(toNextScore <= 0 && addScore>0){
+      score+=10
+      coinSound()
+      toNextScore = 10
+      addScore = Math.max(addScore-10,0)
+
+    }
+    toNextScore--
+    zone.position.y += ((FLOOR-10) - zone.position.y) * 0.1 
+    zone.position.y = Math.floor(zone.position.y) == FLOOR-10 ? FLOOR : zone.position.y
   }
   function moveCam(b: Body): void{
     cam.position.x = Math.max(b.position.x - (cam.width/2),0)
@@ -739,8 +761,8 @@ function renderText(w: string,x: number,y:number,s:number){
   for(var c = 0; c<coor.length;c++){
     canvas.img(
       abc.text,
-      -cam.position.x+x+newX,
-      -cam.position.y+y,
+      x+newX,
+      y,
       4*s,
       4*s,
       coor[c][0],
@@ -775,12 +797,23 @@ function renderCoord(w: string): [number,number,number,number][]{
     canvas.g.canvas.style.width = "auto";
     canvas.g.canvas.style.height =  Math.round(window.innerHeight*0.95) + "px" ;
     canvas.g.viewport(0, 0, canvas.g.canvas.width, canvas.g.canvas.height);
+
+    if(window.innerHeight>window.innerWidth){
+      canvas.cls()
+      canvas.bkg(0,0,0)
+      renderText("flip:phone",40,60,1)
+    }else{
+
+    canvas.cls()
+    canvas.bkg(57/255,73/255,81/255)
     renderMountain()
 
     const p = m.player
-    canvas.cls()
-    canvas.bkg(57/255,73/255,81/255)
+
     renderFloor()
+
+    renderText("extraction",-cam.position.x+ zone.position.x+(zone.width/2) ,zone.position.y-15,1)
+    renderText("area",-cam.position.x+ zone.position.x+(zone.width/2),zone.position.y-10,1)
 
     if (p.shooting) {
       shootingAnim.update(p)
@@ -869,7 +902,9 @@ function renderCoord(w: string): [number,number,number,number][]{
         }
     }
 
-    renderText("record: 10000",width/2,10,1)
+
+    renderText("record: "+score,width/2,10,1)
+  }
     canvas.flush();
     fpsM.tick()
   }
