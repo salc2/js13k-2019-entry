@@ -171,8 +171,12 @@ function createBulletTexture(){
   return TCTex(canvas.g, g.canvas, 4, 4) as WebGLTexture
 }
 
-loadTextures(["soldier_host.png","hostage.png","bothitted.png","mountain.png","floor.png", "soldier_run.png", "soldier_idle.png", "soldier_shooting.png", "bot.png"]).then((textures) => {
-  const [rSolHost,lSolHost,rHost,lHost,rbotHit,lbotHit,rMountain,lMountain,rightFloor,leftFloor, rightRun, leftRun, rightIdle, leftIdle, rightShoot, leftShoot, rightBot, leftBot] = textures
+loadTextures(["soldier_host.png","hostage.png","bothitted.png"
+,"mountain.png","floor.png", "soldier_run.png", "soldier_idle.png", 
+"soldier_shooting.png", "bot.png", "abcnum.png"]).then((textures) => {
+  const [rSolHost,lSolHost,rHost,lHost,rbotHit,lbotHit,
+    ,lMountain,rightFloor,leftFloor, rightRun, leftRun, rightIdle
+    , leftIdle, rightShoot, leftShoot, rightBot, leftBot, abc,,] = textures
 
   const bulletTexture = createBulletTexture()
 
@@ -728,6 +732,45 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png","mountain.png","f
 
   }
 
+
+function renderText(w: string,x: number,y:number,s:number){
+  const coor = renderCoord(w)
+  var newX = -(w.length* (4*s))/2;
+  for(var c = 0; c<coor.length;c++){
+    canvas.img(
+      abc.text,
+      -cam.position.x+x+newX,
+      -cam.position.y+y,
+      4*s,
+      4*s,
+      coor[c][0],
+      coor[c][1],
+      coor[c][2],
+      coor[c][3]
+    );
+
+    newX+=5
+  }
+}
+
+function renderCoord(w: string): [number,number,number,number][]{
+  const letters: string[] = ['abcdefghijklm','nopqrstuvwxyz', '0123456789:!+']
+  let resp:[number,number,number,number][] = new Array<[number,number,number,number]>()
+
+  for(var i = 0;i<w.length;i++){
+    const l = w.charAt(i)
+    for(var r = 0; r<letters.length;r++){
+      const index = letters[r].indexOf(l)
+      if(index > -1){
+        resp.push([(index*4)/52, (r*4) /12, ((index*4)+4)/52 , ((r*4)+4)/12])
+      }
+    }
+  }
+
+  return resp
+}
+
+
   const render = (m: Model) => {
     canvas.g.canvas.style.width = "auto";
     canvas.g.canvas.style.height =  Math.round(window.innerHeight*0.95) + "px" ;
@@ -826,6 +869,7 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png","mountain.png","f
         }
     }
 
+    renderText("record: 10000",width/2,10,1)
     canvas.flush();
     fpsM.tick()
   }
