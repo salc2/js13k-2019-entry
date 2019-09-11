@@ -21,11 +21,9 @@ interface Vector {
   y: number
 }
 interface Camera{
-  position: Vector
-  width: number
-  height: number
-  maxX: number
-  maxY: number
+  p: Vector
+  w: number
+  h: number
 }
 
 interface Particle extends Body{
@@ -34,37 +32,38 @@ interface Particle extends Body{
 interface Bullet extends Body {
 }
 interface Body {
-  position: Vector
-  velocity: Vector
-  dir: Dir
-  height: number
-  width: number
-  visible: boolean
+  p: Vector
+  v: Vector
+  d: Dir
+  h: number
+  w: number
+  vi: boolean
 }
 interface Player extends Body {
-  shooting: boolean
-  carring?: Body
+  s: boolean
+  c?: Body
+  l:number
 }
 interface Enemy extends Body {
-  life: number
-  hitted: boolean
+  l: number
+  hi: boolean
 }
 
 interface State {
-  player: Player
-  enemies: Enemy[]
-  bullets: Bullet[],
-  hostages: Body[]
+  p: Player
+  es: Enemy[]
+  bs: Bullet[],
+  hs: Body[]
 }
 
 interface ImgTexture {
-  width: number
-  height: number
-  text: WebGLTexture
+  w: number
+  h: number
+  t: WebGLTexture
 }
 enum Dir {
-  Left,
-  Right
+  L,
+  R
 }
 
 enum EventType {
@@ -99,10 +98,10 @@ function rdnAngle(): number{
 
 function getAABB(b: Body): AABB {
   return {
-    lt: { x: b.position.x, y: b.position.y },
-    rt: { x: b.position.x + b.width, y: b.position.y },
-    rb: { x: b.position.x + b.width, y: b.position.y + b.height },
-    lb: { x: b.position.x, y: b.position.y + b.height }
+    lt: { x: b.p.x, y: b.p.y },
+    rt: { x: b.p.x + b.w, y: b.p.y },
+    rb: { x: b.p.x + b.w, y: b.p.y + b.h },
+    lb: { x: b.p.x, y: b.p.y + b.h }
   }
 }
 
@@ -111,10 +110,10 @@ function getTileIndeces(v: Vector): number {
 }
 
 export function collide(body1: Body, body2: Body): boolean {
-  const result = body1.position.x < (body2.position.x + body2.width) &&
-    body1.position.x + (body1.width) > body2.position.x &&
-    body1.position.y < body2.position.y + body2.height &&
-    body1.position.y + body1.height > body2.position.y;
+  const result = body1.p.x < (body2.p.x + body2.w) &&
+    body1.p.x + (body1.w) > body2.p.x &&
+    body1.p.y < body2.p.y + body2.h &&
+    body1.p.y + body1.h > body2.p.y;
   return result;
 }
 
@@ -130,10 +129,10 @@ function loadTextures(urls: string[]): Promise<ImgTexture[]> {
         g.canvas.height = img.height
         g.canvas.width = img.width
         g.drawImage(img, 0, 0, img.width, img.height)
-        const tex1 = {
-          width: img.width,
-          height: img.height,
-          text: TCTex(canvas.g, g.canvas, img.width, img.height) as WebGLTexture
+        const tex1: ImgTexture  = {
+          w: img.width,
+          h: img.height,
+          t: TCTex(canvas.g, g.canvas, img.width, img.height) as WebGLTexture
         }
 
         g.clearRect(0, 0, img.width, img.height)
@@ -141,10 +140,10 @@ function loadTextures(urls: string[]): Promise<ImgTexture[]> {
         g.scale(-1, 1)
         g.drawImage(img, img.width * -1, 0, img.width, img.height)
         g.restore()
-        const tex2 = {
-          width: img.width,
-          height: img.height,
-          text: TCTex(canvas.g, g.canvas, img.width, img.height) as WebGLTexture
+        const tex2: ImgTexture = {
+          w: img.width,
+          h: img.height,
+          t: TCTex(canvas.g, g.canvas, img.width, img.height) as WebGLTexture
         }
         
         var i = index*2;
@@ -172,9 +171,9 @@ function createBulletTexture(){
   return TCTex(canvas.g, g.canvas, 4, 4) as WebGLTexture
 }
 
-loadTextures(["soldier_host.png","hostage.png","bothitted.png"
-,"mountain.png","floor.png", "soldier_run.png", "soldier_idle.png", 
-"soldier_shooting.png", "bot.png", "abcnum.png"]).then((textures) => {
+loadTextures(["sh.png","h.png","bh.png"
+,"m.png","f.png", "sr.png", "si.png", 
+"ss.png", "b.png", "a.png"]).then((textures) => {
   const [rSolHost,lSolHost,rHost,lHost,rbotHit,lbotHit,
     ,lMountain,rightFloor,leftFloor, rightRun, leftRun, rightIdle
     , leftIdle, rightShoot, leftShoot, rightBot, leftBot, abc,,] = textures
@@ -209,7 +208,7 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
   function initBullets(num: number): Bullet[] {
     const bs: Bullet[] = []
     for (let i = 0; i < num; i++) {
-      bs.push({ position: { x: 50, y: 50 }, velocity: { x: 0, y: 0 }, visible: false, dir: Dir.Left, width: 4, height: 4 })
+      bs.push({ p: { x: 50, y: 50 }, v: { x: 0, y: 0 }, vi: false, d: Dir.L, w: 4, h: 4 })
     }
     return bs
   }
@@ -217,7 +216,7 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
   function initHosta(num: number): Body[] {
     const bs: Body[] = []
     for (let i = 0; i < num; i++) {
-      bs.push({ position: { x: 250, y: 0 }, velocity: { x: 0, y: 0 }, visible: true, dir: Dir.Left, width: 16, height: 16 })
+      bs.push({ p: { x: 250, y: 0 }, v: { x: 0, y: 0 }, vi: true, d: Dir.L, w: 16, h: 16 })
     }
     return bs
   }
@@ -225,14 +224,14 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
 
   function newEnemy(x: number, y:number, vel: number): Enemy {
     return {
-      position: { x: x, y: y },
-      velocity: { x: vel, y: 0.0 },
-      dir: Dir.Left,
-      width: 20,
-      height: 20,
-      visible: false,
-      hitted: false,
-      life: 5
+      p: { x: x, y: y },
+      v: { x: vel, y: 0.0 },
+      d: Dir.L,
+      w: 20,
+      h: 20,
+      vi: false,
+      hi: false,
+      l: 3
     }
   }
   function newEnemies(x: number, y:number, n: number): Enemy []{
@@ -243,10 +242,10 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
     return  es
   }
 
-  const cam: Camera = {position:{x:0,y:0},width:300,height: 150, maxX:0,maxY:0}
+  const cam: Camera = {p:{x:0,y:0},w:300,h: 150}
   window["cam"] = cam
 
-  let camCenter = cam.position
+  let camCenter = cam.p
   let radioToShake = 0
   let shake = false
 
@@ -255,8 +254,8 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
     const ang = rnd() % Math.PI * 2
     const nx = Math.sin(ang) * radioToShake
     const ny = Math.cos(ang) * radioToShake
-    cam.position.x = x + nx
-    cam.position.y = y + ny
+    cam.p.x = x + nx
+    cam.p.y = y + ny
     radioToShake *= 0.9
   }
 /*   canvas.g.canvas.addEventListener("click", (event) => {
@@ -272,17 +271,17 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
   canvas.g.canvas.addEventListener("click", (event) => {
     let take = 1
     const pos = getMousePos(canvas.g.canvas, event)
-    for(var i = 0; i < currentState.enemies.length; i++){
-      const ene = currentState.enemies[i]
-      if(!ene.visible && take > 0){
-        ene.position.x = cam.position.x+pos.x
-        ene.position.y = cam.position.y+pos.y
-        ene.visible = true
-        ene.visible = true
-        ene.life = 5
-        ene.velocity.x =  rnd() * (3.9-1.7) + 1.7  * ( currentState.player.position.x > ene.position.x ?
+    for(var i = 0; i < currentState.es.length; i++){
+      const ene = currentState.es[i]
+      if(!ene.vi && take > 0){
+        ene.p.x = cam.p.x+pos.x
+        ene.p.y = cam.p.y+pos.y
+        ene.vi = true
+        ene.vi = true
+        ene.l = 5
+        ene.v.x =  rnd() * (3.9-1.7) + 1.7  * ( currentState.p.p.x > ene.p.x ?
         WALK_SPEED : -WALK_SPEED)
-        ene.dir = ene.velocity.x > 0 ? Dir.Left : Dir.Right
+        ene.d = ene.v.x > 0 ? Dir.L : Dir.R
         take --
       }
     }
@@ -296,32 +295,33 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
 			const vx = rnd() * (sp - (-sp)) + (-sp)
 			const vy = rnd() * (jp - (-jp)) + (-jp)
 			var angle = rnd() * Math.PI * 2;
-			particles.push({position: {x: x,y:y},velocity:{x: vx * Math.cos(angle), y:vy * Math.sin(angle)},dir:Dir.Left,height:4,width:4,visible:true})
+			particles.push({p: {x: x,y:y},v:{x: vx * Math.cos(angle), y:vy * Math.sin(angle)},d:Dir.L,h:4,w:4,vi:true})
 		}
   }
 
   let currentState: Model = {
-    player: {
-      position: { x: 128, y: 0.0 },
-      velocity: { x: 0.0, y: 0.0 },
-      dir: Dir.Right,
-      shooting: false,
-      width: 20,
-      height: 20,
-      visible: true
+    p: {
+      p: { x: 128, y: 0.0 },
+      v: { x: 0.0, y: 0.0 },
+      d: Dir.R,
+      s: false,
+      w: 20,
+      h: 20,
+      vi: true,
+      l: 3
     },
-    enemies: newEnemies(34,0,50),
-    bullets: initBullets(60),
-    hostages: initHosta(1)
+    es: newEnemies(34,0,50),
+    bs: initBullets(60),
+    hs: initHosta(1)
   }
 
   const FLOOR = height - 10
   const SECOND_FLOOR = FLOOR * 0.7
-  const zone: Body = { position: { x: 50, y: FLOOR }, velocity: { x: 0, y: 0 }, visible: true, dir: Dir.Left, width: 150, height: 20 }
+  const zone: Body = { p: { x: 50, y: FLOOR }, v: { x: 0, y: 0 }, vi: true, d: Dir.L, w: 150, h: 20 }
 
 
   function createFloor(x:number, y:number, width: number): Body {
-    return {position:{x:x, y: y},width: width, height: 20,dir: Dir.Left,velocity:{x:0,y:0},visible: true}
+    return {p:{x:x, y: y},w: width, h: 20,d: Dir.L,v:{x:0,y:0},vi: true}
   }
 
   const floors = [createFloor(0.0,FLOOR,900), createFloor(200.0,SECOND_FLOOR,260),createFloor(300.0,SECOND_FLOOR,360)]
@@ -453,13 +453,13 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
         }
       }
       const [v0, u0, v1, u1] = frames[frameIndex]
-      let text = p.dir == Dir.Right ? rightT : leftT
+      let text = p.d == Dir.R ? rightT : leftT
       canvas.img(
-        text.text,
-        -cam.position.x+(p.position.x + (p.width / 2)),
-        -cam.position.y+p.position.y,
-        p.width,
-        p.height,
+        text.t,
+        -cam.p.x+(p.p.x + (p.w / 2)),
+        -cam.p.y+p.p.y,
+        p.w,
+        p.h,
         v0,
         u0,
         v1,
@@ -478,7 +478,7 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
     for(var i=0;i<floors.length;i++){
       floorBottoms = floorBottoms || collideFloorBottom(b,floors[i])
     }
-    return b.position.y + b.height == FLOOR || floorBottoms;
+    return b.p.y + b.h == FLOOR || floorBottoms;
   }
   
   const botHittedAnim = new BodyAnimation(rbotHit, lbotHit, 2, true, [[0, 0, 1, 1]])
@@ -497,7 +497,7 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
     if(radioToShake > 0.0002){
       shaking()
     }
-    const p = m.player
+    const p = m.p
     if (isOverFloor(p)) {
       jumpTries = 2
     }
@@ -506,42 +506,42 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
         if(jumpTries > 0){
           jumpTries--
           
-          p.velocity.y = p.carring ? -JUMP_VEL/2 : -JUMP_VEL
+          p.v.y = p.c ? -JUMP_VEL/2 : -JUMP_VEL
           jumpSound()
         }
-        p.shooting = false
+        p.s = false
         break;
       case EventType.LP:
-        p.dir = Dir.Left
-        p.velocity.x = p.carring ? -WALK_SPEED/2 : -WALK_SPEED
-        p.shooting = false
+        p.d = Dir.L
+        p.v.x = p.c ? -WALK_SPEED/2 : -WALK_SPEED
+        p.s = false
         break;
       case EventType.RP:
-        p.dir = Dir.Right
-        p.velocity.x = p.carring ? WALK_SPEED/2 : WALK_SPEED
-        p.shooting = false
+        p.d = Dir.R
+        p.v.x = p.c ? WALK_SPEED/2 : WALK_SPEED
+        p.s = false
         break;
       case EventType.LR:
-        p.velocity.x = 0
+        p.v.x = 0
         break;
       case EventType.RR:
-        p.velocity.x = 0
+        p.v.x = 0
         break;
       case EventType.AP:
-        if(!m.player.carring){
+        if(!m.p.c){
         shootingAnim.reset()
-        p.shooting = true
-        p.velocity.x = (p.dir == Dir.Left ? 1.5 : -1.5)
+        p.s = true
+        p.v.x = (p.d == Dir.L ? 1.5 : -1.5)
 
-        for (var i = 0; i < m.bullets.length; i++) {
-          const b = m.bullets[i]
-          if (!b.visible && gunReady == 0) {
+        for (var i = 0; i < m.bs.length; i++) {
+          const b = m.bs[i]
+          if (!b.vi && gunReady == 0) {
             const angle = rdnAngle()
-            b.position.x = p.position.x + p.width + b.width
-            b.position.y = p.position.y + (p.height / 2.4)
-            b.velocity.x = (p.dir == Dir.Right ? 35 : -35) * Math.cos(angle)
-            b.velocity.y = 5 * Math.sin(angle)
-            b.visible = true
+            b.p.x = p.p.x + p.w + b.w
+            b.p.y = p.p.y + (p.h / 2.4)
+            b.v.x = (p.d == Dir.R ? 35 : -35) * Math.cos(angle)
+            b.v.y = 5 * Math.sin(angle)
+            b.vi = true
             gunReady = 3
             fireSound()
             radioToShake = 2
@@ -549,16 +549,16 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
           }
         }
       }else{
-        let host = m.player.carring
-        host.visible = true
-        host.position.x = m.player.dir == Dir.Left ? m.player.position.x - 25 : m.player.position.x + 25
-        host.position.y = m.player.position.y - 10
-        m.player.carring = null
+        let host = m.p.c
+        host.vi = true
+        host.p.x = m.p.d == Dir.L ? m.p.p.x - 25 : m.p.p.x + 25
+        host.p.y = m.p.p.y - 10
+        m.p.c = null
       }
 
         break;
       case EventType.AR:
-        p.velocity.x = 0
+        p.v.x = 0
         //p.shooting = false
         //ShootingAnim.reset()
         break;
@@ -567,56 +567,58 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
     }
     
 
-     move(m.player)
+     move(m.p)
 
-    for (var i = 0; i < m.hostages.length; i++) {
-      const h = m.hostages[i]
+    for (var i = 0; i < m.hs.length; i++) {
+      const h = m.hs[i]
       move(h)
-      if(h.visible && collide(m.player,h) && !m.player.carring){
-        h.visible = false
-        m.player.carring = h
+      if(h.vi && collide(m.p,h) && !m.p.c){
+        h.vi = false
+        m.p.c = h
       }
-      if(h.visible && collide(h,zone)){
+      if(h.vi && collide(h,zone)){
         addScore += 500
-        h.visible = false
+        h.vi = false
       }
     }
-    for (var i = 0; i < m.enemies.length; i++) {
-      const e = m.enemies[i]
+    for (var i = 0; i < m.es.length; i++) {
+      const e = m.es[i]
       ticksHitted = Math.max(ticksHitted-1,0)
       if(ticksHitted == 0){
-        e.hitted = false
+        e.hi = false
       }
       move(e)
-      if (e.position.x < 0 || (e.position.x + 20 > 900)) {
-        e.velocity.x = e.velocity.x * -1
-        e.dir = e.velocity.x > 0 ? Dir.Left : Dir.Right
+      if (e.p.x < 0 || (e.p.x + 20 > 900)) {
+        e.v.x = e.v.x * -1
+        e.d = e.v.x > 0 ? Dir.L : Dir.R
       }
-      for(var j = 0;j< m.bullets.length;j++){
-        const b = m.bullets[j]
-        if (e.visible && b.visible && collide(b, e)) {
+      for(var j = 0;j< m.bs.length;j++){
+        const b = m.bs[j]
+        if (e.vi && b.vi && collide(b, e)) {
           hitSound()
-          e.hitted = true
+          e.hi = true
           ticksHitted = 8
-          e.position.x += (b.velocity.x > 0 ? + 18 : -18)
-          if(e.life == 0){
+          e.p.x += (b.v.x > 0 ? + 18 : -18)
+          if(e.l == 0){
             radioToShake = 4
-            explodeParticles(e.position.x+(e.width/2),e.position.y+(e.height/2))
-            e.visible = false
-            e.velocity.x = 0
+            explodeParticles(e.p.x+(e.w/2),e.p.y+(e.h/2))
+            e.vi = false
+            e.v.x = 0
             addScore += 100
 
           }else{
-            e.life = Math.max(e.life-1,0)
+            e.l = Math.max(e.l-1,0)
           }
-          b.visible = false
-          b.velocity.x = 0
+          b.vi = false
+          b.v.x = 0
         }
       }
-      
+      if(e.vi && collide(e,m.p)){
+        m.p.l--
+      }
     }
-    for (var i = 0; i < m.bullets.length; i++) {
-      const b = m.bullets[i]
+    for (var i = 0; i < m.bs.length; i++) {
+      const b = m.bs[i]
       moveBullet(b)
     }
     for (var i = 0; i < particles.length; i++) {
@@ -626,14 +628,14 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
 
       for(var f=0; f<floors.length;f++){
         if(collideFloorBottom(p,floors[f])){
-          persistence.push(particles[i])        
           particles.splice(i, 1)
+          persistence.push(p)         
         }
       }
     }
 
     gunReady = Math.max(0, gunReady - 1);
-    moveCam(m.player)
+    moveCam(m.p)
 
     if(toNextScore <= 0 && addScore>0){
       score+=10
@@ -643,11 +645,11 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
 
     }
     toNextScore--
-    zone.position.y += ((FLOOR-10) - zone.position.y) * 0.1 
-    zone.position.y = Math.floor(zone.position.y) == FLOOR-10 ? FLOOR : zone.position.y
+    zone.p.y += ((FLOOR-10) - zone.p.y) * 0.1 
+    zone.p.y = Math.floor(zone.p.y) == FLOOR-10 ? FLOOR : zone.p.y
   }
   function moveCam(b: Body): void{
-    cam.position.x = Math.max(b.position.x - (cam.width/2),0)
+    cam.p.x = Math.max(b.p.x - (cam.w/2),0)
   }
 
   function renderMountain() {
@@ -655,11 +657,11 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
     canvas.scale(6,6)
     for (var x = 0; x < 100; x += 20) {
       canvas.img(
-        lMountain.text,
-       (-cam.position.x*0.06) + x,
-       (-cam.position.y*0.06) + 5,
-        lMountain.width,
-        lMountain.height,
+        lMountain.t,
+       (-cam.p.x*0.06) + x,
+       (-cam.p.y*0.06) + 5,
+        lMountain.w,
+        lMountain.h,
         0,
         0,
         1,
@@ -672,14 +674,14 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
   function renderFloor() {
       for(var f=0; f<floors.length;f++){
         const floor = floors[f]
-        for (var x = floor.position.x; x <= floor.position.x+floor.width ; x += 20) {
+        for (var x = floor.p.x; x <= floor.p.x+floor.w ; x += 20) {
           const text = x % 7 == 0 ? leftFloor : rightFloor
           canvas.img(
-            text.text,
-            -cam.position.x+x,
-            -cam.position.y+(floor.position.y-10),
-            text.width,
-            text.height,
+            text.t,
+            -cam.p.x+x,
+            -cam.p.y+(floor.p.y-10),
+            text.w,
+            text.h,
             0,
             0,
             1,
@@ -692,62 +694,62 @@ loadTextures(["soldier_host.png","hostage.png","bothitted.png"
   function ifOnTheFloorgetY(b: Body): number{
     let bottomCollide: number = -1
     for(var i = 0;i< floors.length;i++){
-       bottomCollide = collideFloorBottom(b,floors[i]) ? floors[i].position.y : -1 
+       bottomCollide = collideFloorBottom(b,floors[i]) ? floors[i].p.y : -1 
     }
     return bottomCollide;
   }
 
   function applyGravity(b: Body) {
-    b.velocity.y =  ifOnTheFloorgetY(b) < 0 ? b.velocity.y + (GRAVITY * currentDelta) : b.velocity.y
+    b.v.y =  ifOnTheFloorgetY(b) < 0 ? b.v.y + (GRAVITY * currentDelta) : b.v.y
   }
 
   function outsideScreen(b: Bullet) {
-    return b.position.x < 0 || b.position.x > 900
+    return b.p.x < 0 || b.p.x > 900
   }
 
   function moveBullet(b: Bullet): void {
     if (outsideScreen(b)) {
-      b.visible = false
-      b.velocity.x = 0
+      b.vi = false
+      b.v.x = 0
     }
-    b.position.x += b.velocity.x * currentDelta
-    b.position.y += b.velocity.y * currentDelta
+    b.p.x += b.v.x * currentDelta
+    b.p.y += b.v.y * currentDelta
   }
 
   function collideFloorTop(b: Body, f: Body): boolean {
    return collide(b,f) &&
-    f.position.y+(f.height/2) > b.position.y
+    f.p.y+(f.h/2) > b.p.y
   }
   function collideFloorBottom(b: Body, f: Body): boolean {
     return collide(b,f) &&
-    b.position.y < f.position.y
+    b.p.y < f.p.y
    }
 
    function collideFloorLeft(b: Body,f: Body): boolean {
     return collide(b,f) &&
-    b.position.x < f.position.x && b.position.x+b.width > f.position.x
+    b.p.x < f.p.x && b.p.x+b.w > f.p.x
    }
    function collideFloorRight(b: Body,f: Body): boolean {
     return collide(b,f) &&
-    b.position.x+(b.width*0.9) < f.position.x && b.velocity.x > 0
+    b.p.x+(b.w*0.9) < f.p.x && b.v.x > 0
    }
 
   function move(b: Body): void {
     const groundY = ifOnTheFloorgetY(b)
-    b.position.y = groundY < 0 ? b.position.y + (b.velocity.y * currentDelta) : groundY - b.height
-    b.position.x += b.velocity.x * currentDelta
+    b.p.y = groundY < 0 ? b.p.y + (b.v.y * currentDelta) : groundY - b.h
+    b.p.x += b.v.x * currentDelta
     applyGravity(b)
 
     for(var f =0; f< floors.length; f++){
 
       if(collideFloorTop(b,floors[f])){
-        if(b.velocity.y < 0){
-          b.velocity.y = 0
+        if(b.v.y < 0){
+          b.v.y = 0
         }
       }
       if(collideFloorBottom(b,floors[f])){
-        if(b.velocity.y > 0){
-          b.velocity.y = 0
+        if(b.v.y > 0){
+          b.v.y = 0
         }
       }
     }
@@ -760,7 +762,7 @@ function renderText(w: string,x: number,y:number,s:number){
   var newX = -(w.length* (4*s))/2;
   for(var c = 0; c<coor.length;c++){
     canvas.img(
-      abc.text,
+      abc.t,
       x+newX,
       y,
       4*s,
@@ -808,23 +810,23 @@ function renderCoord(w: string): [number,number,number,number][]{
     canvas.bkg(57/255,73/255,81/255)
     renderMountain()
 
-    const p = m.player
+    const p = m.p
 
     renderFloor()
 
-    renderText("extraction",-cam.position.x+ zone.position.x+(zone.width/2) ,zone.position.y-15,1)
-    renderText("area",-cam.position.x+ zone.position.x+(zone.width/2),zone.position.y-10,1)
+    renderText("extraction",-cam.p.x+ zone.p.x+(zone.w/2) ,zone.p.y-15,1)
+    renderText("area",-cam.p.x+ zone.p.x+(zone.w/2),zone.p.y-10,1)
 
-    if (p.shooting) {
+    if (p.s) {
       shootingAnim.update(p)
-    } else if (p.velocity.x == 0) {
-      if(p.carring){
+    } else if (p.v.x == 0) {
+      if(p.c){
        soldierHostAni.update(p)
       }else{
       idleAnim.update(p)
       }
     } else {
-      if(p.carring){
+      if(p.c){
         soldierHostAni.reset()
         soldierHostAni.update(p)
        }else{
@@ -832,10 +834,10 @@ function renderCoord(w: string): [number,number,number,number][]{
        }
     }
 
-    for (var i = 0; i < m.enemies.length; i++) {
-      const e = m.enemies[i]
-      if(e.visible){
-        if(e.hitted){
+    for (var i = 0; i < m.es.length; i++) {
+      const e = m.es[i]
+      if(e.vi){
+        if(e.hi){
           botHittedAnim.update(e)
         }else{
           botAnim.update(e)
@@ -843,13 +845,13 @@ function renderCoord(w: string): [number,number,number,number][]{
       }
     }
 
-    for (var i = 0; i < m.bullets.length; i++) {
-      const b = m.bullets[i]
-      if (b.visible) {
+    for (var i = 0; i < m.bs.length; i++) {
+      const b = m.bs[i]
+      if (b.vi) {
         canvas.img(
           bulletTexture,
-          -cam.position.x+b.position.x,
-          -cam.position.y+b.position.y,
+          -cam.p.x+b.p.x,
+          -cam.p.y+b.p.y,
           4,
           4,
           0,
@@ -860,9 +862,9 @@ function renderCoord(w: string): [number,number,number,number][]{
       }
     }
 
-    for (var i = 0; i < m.hostages.length; i++) {
-      const b = m.hostages[i]
-      if (b.visible) {
+    for (var i = 0; i < m.hs.length; i++) {
+      const b = m.hs[i]
+      if (b.vi) {
         hostAnim.update(b)
       }
     }
@@ -870,11 +872,11 @@ function renderCoord(w: string): [number,number,number,number][]{
 
     for (var i = 0; i < particles.length; i++) {
       const p = particles[i]
-        if(p.visible){
+        if(p && p.vi){
           canvas.img(
-            rbotHit.text,
-            -cam.position.x+p.position.x,
-            -cam.position.y+p.position.y,
+            rbotHit.t,
+            -cam.p.x+p.p.x,
+            -cam.p.y+p.p.y,
             8,
             8,
             0,
@@ -887,11 +889,11 @@ function renderCoord(w: string): [number,number,number,number][]{
 
     for (var i = 0; i < persistence.length; i++) {
       const p = persistence[i]
-        if(p.visible){
+        if(p && p.vi){
           canvas.img(
-            rbotHit.text,
-            -cam.position.x+p.position.x,
-            -cam.position.y+p.position.y,
+            rbotHit.t,
+            -cam.p.x+p.p.x,
+            -cam.p.y+p.p.y,
             8,
             8,
             0,
@@ -901,15 +903,14 @@ function renderCoord(w: string): [number,number,number,number][]{
           );
         }
     }
-
-
-    renderText("record: "+score,width/2,10,1)
+    renderText("score: "+score,width/2,10,1)
+  // renderText("a",width/2,10,2)
   }
     canvas.flush();
     fpsM.tick()
   }
 
-  /*  */if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
     const svgs: any = document.querySelectorAll("svg")
     svgs.forEach(svg => {
       svg.style.display = "block";
