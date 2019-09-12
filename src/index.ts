@@ -282,22 +282,32 @@ loadTextures(["sh.png","h.png","bh.png"
 		}
   }
 
-  let currentState: Model = {
-    p: {
-      p: { x: 128, y: 0.0 },
-      v: { x: 0.0, y: 0.0 },
-      d: Dir.R,
-      s: false,
-      w: 20,
-      h: 20,
-      vi: true,
-      l: 3
-    },
-    es: newEnemies(34,0,50),
-    bs: initBullets(60),
-    hs: initHosta(1),
-    s: S.M
+
+  function createInitState(): Model {
+    score = 0
+    addScore = 0
+    particles = []
+    persistence = []
+
+    return {
+      p: {
+        p: { x: 128, y: 0.0 },
+        v: { x: 0.0, y: 0.0 },
+        d: Dir.R,
+        s: false,
+        w: 20,
+        h: 20,
+        vi: true,
+        l: 10
+      },
+      es: newEnemies(34,0,50),
+      bs: initBullets(60),
+      hs: initHosta(1),
+      s: S.M
+    }
   }
+
+  let currentState: Model = createInitState()
 
   const FLOOR = height - 10
   const SECOND_FLOOR = FLOOR * 0.7
@@ -386,7 +396,7 @@ loadTextures(["sh.png","h.png","bh.png"
         currentAction = EventType.JP
         break;
       case 13:
-        currentAction = EventType.UP
+        currentAction = EventType.AP
         break;
       case 32:
         currentAction = EventType.AP
@@ -406,6 +416,9 @@ loadTextures(["sh.png","h.png","bh.png"
         currentAction = EventType.RR
         break;
       case 32:
+        currentAction = EventType.AR
+        break;
+      case 13:
         currentAction = EventType.AR
         break;
       default:
@@ -470,14 +483,15 @@ loadTextures(["sh.png","h.png","bh.png"
   const ONETHIRD = 1/3 
   const soldierHostAni = new BodyAnimation(rSolHost, lSolHost, 14, false, [[0, 0, 1, ONETHIRD], [0, ONETHIRD, 1, ONETHIRD*2],[0, ONETHIRD*2, 1, 1]])
   const idleAnim = new BodyAnimation(rightIdle, leftIdle, 20, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
-  const hostAnim = new BodyAnimation(rHost, lHost, 20, true, [[0, 0, 1, 0.5], [0, 0.5, 1, 1]])
+  const hostAnim = new BodyAnimation(rHost, lHost, 20, true, [[0, 0, 1, 0.5], [0, 0.505, 1, 1]])
   const runAnim = new BodyAnimation(rightRun, leftRun, 8, true, [[0, 0, 1, 0.2], [0, .2, 1, 0.4], [0, .4, 1, 0.6], [0, .6, 1, 0.8], [0, .8, 1, 1.0]])
   const shootingAnim = new BodyAnimation(rightShoot, leftShoot, 3, false, [[0, 0, 1, 0.25], [0, .25, 1, 0.5], [0, .5, 1, 0.75], [0, .75, 1, 1.0]])
-
+  let menuSelection: number = 0 
   let gunReady: number = 0
   let jumpTries:number = 2
   let ticksHitted: number = 0
   function update(a: Action, m: Model) {
+    
     if(m.s == S.G){
     if(radioToShake > 0.0002){
       shaking()
@@ -552,7 +566,7 @@ loadTextures(["sh.png","h.png","bh.png"
     }
 
      move(m.p)
-
+      m.p.l = m.p.p.y > height ? 0 : m.p.l
     for (var i = 0; i < m.hs.length; i++) {
       const h = m.hs[i]
       move(h)
@@ -599,6 +613,9 @@ loadTextures(["sh.png","h.png","bh.png"
       }
       if(e.vi && collide(e,m.p)){
         m.p.l--
+        hitSound()
+        m.p.p.x +=  m.p.d == Dir.L ? 10 : -10
+        m.p.p.y +=  -3
       }
     }
     for (var i = 0; i < m.bs.length; i++) {
@@ -634,9 +651,25 @@ loadTextures(["sh.png","h.png","bh.png"
   }else if(m.s == S.M){
     if(a == EventType.AP){
       m.s = S.G
+      fireSound()
+    }
+  }else{
+    if(a == EventType.LP || a == EventType.RP){
+      menuSelection =  (menuSelection+1) % 2
+      coinSound()
+    }
+    if(a == EventType.AP && menuSelection == 0 && navigator.onLine){
+      window.location.href = 'https://twitter.com/intent/tweet?url=https%3A%2F%2Fjs13kgames.com%2Fentries%2Fback-to-rescue&text=I%20played%20Back%20to%20Rescue%20by%20@salc2%20and%20reach%20'+(addScore+score)+'%20points%20&hashtags=js13k%2Cjs13games';
+    }
+    if(a == EventType.AP && menuSelection == 1){
+      currentState = createInitState()
+      currentState.s = S.G
     }
   }
-  }
+if(m.p.l <= 0){
+  m.s = S.GO
+}  
+}
   function moveCam(b: Body): void{
     cam.p.x = Math.max(b.p.x - (cam.w/2),0)
   }
@@ -767,7 +800,7 @@ function renderText(w: string,x: number,y:number,s:number){
 }
 
 function renderCoord(w: string): [number,number,number,number][]{
-  const letters: string[] = ['abcdefghijklm','nopqrstuvwxyz', '0123456789:!+']
+  const letters: string[] = ['abcdefghijklm','nopqrstuvwxyz', '0123456789:! ']
   let resp:[number,number,number,number][] = new Array<[number,number,number,number]>()
 
   for(var i = 0;i<w.length;i++){
@@ -792,9 +825,21 @@ function renderCoord(w: string): [number,number,number,number][]{
     if(window.innerHeight>window.innerWidth){
       cn.cls()
       cn.bkg(0,0,0)
-      renderText("flip:phone",40,60,1)
+      renderText("flip phone",40,60,1)
     }else{
-    if(m.s == S.G ){
+      if(m.s == S.GO ){
+        let t = "",p =""
+        if(menuSelection > 0){
+          t = "!"
+        }else{
+          p = "!"
+        }
+
+          renderText("game over",width/2,height/5,4)
+          renderText(t+"play again"+t,width/3-10,height/3,2)
+          renderText(p+"tweet score"+p,width/3 * 2+10,height/3,2)
+          
+    }else if(m.s == S.G ){
     cn.cls()
     cn.bkg(57/255,73/255,81/255)
     renderMountain()
@@ -892,12 +937,16 @@ function renderCoord(w: string): [number,number,number,number][]{
           );
         }
     }
+    renderText("life: "+m.p.l,width/2,24,1)
     renderText("score: "+score,width/2,10,2)
     }else if(m.s == S.M){
       renderText("back",width/2,height/3,4)
       renderText("to",width/2,height/3 + (4*4)+4 ,4)
       renderText("rescue",width/2,height/3+ (4*4*2)+8,4)
-      renderText("press+attack+to+start",width/2,height/2+ (4*4*2)+14,1)
+      if(currentTime % 500 > 250){
+        coinSound()
+        renderText("press space to start",width/2,height/2+ (4*4*2)+14,1)
+      }
     }
   }
     cn.flush();
