@@ -54,6 +54,10 @@ interface State {
   es: Enemy[]
   bs: Bullet[],
   hs: Body[]
+  s: S
+}
+enum S{
+  M,G,GO
 }
 
 interface ImgTexture {
@@ -312,7 +316,8 @@ loadTextures(["sh.png","h.png","bh.png"
     },
     es: newEnemies(34,0,50),
     bs: initBullets(60),
-    hs: initHosta(1)
+    hs: initHosta(1),
+    s: S.M
   }
 
   const FLOOR = height - 10
@@ -494,6 +499,7 @@ loadTextures(["sh.png","h.png","bh.png"
   let jumpTries:number = 2
   let ticksHitted: number = 0
   function update(a: Action, m: Model) {
+    if(m.s == S.G){
     if(radioToShake > 0.0002){
       shaking()
     }
@@ -647,6 +653,12 @@ loadTextures(["sh.png","h.png","bh.png"
     toNextScore--
     zone.p.y += ((FLOOR-10) - zone.p.y) * 0.1 
     zone.p.y = Math.floor(zone.p.y) == FLOOR-10 ? FLOOR : zone.p.y
+  
+  }else if(m.s == S.M){
+    if(a == EventType.AP){
+      m.s = S.G
+    }
+  }
   }
   function moveCam(b: Body): void{
     cam.p.x = Math.max(b.p.x - (cam.w/2),0)
@@ -759,11 +771,11 @@ loadTextures(["sh.png","h.png","bh.png"
 
 function renderText(w: string,x: number,y:number,s:number){
   const coor = renderCoord(w)
-  var newX = -(w.length* (4*s))/2;
+  var newX = -((w.length* (4*s) ) /2) ;
   for(var c = 0; c<coor.length;c++){
     canvas.img(
       abc.t,
-      x+newX,
+      newX+x,
       y,
       4*s,
       4*s,
@@ -773,7 +785,7 @@ function renderText(w: string,x: number,y:number,s:number){
       coor[c][3]
     );
 
-    newX+=5
+    newX+= (4*s)+1
   }
 }
 
@@ -805,7 +817,7 @@ function renderCoord(w: string): [number,number,number,number][]{
       canvas.bkg(0,0,0)
       renderText("flip:phone",40,60,1)
     }else{
-
+    if(m.s == S.G ){
     canvas.cls()
     canvas.bkg(57/255,73/255,81/255)
     renderMountain()
@@ -903,8 +915,13 @@ function renderCoord(w: string): [number,number,number,number][]{
           );
         }
     }
-    renderText("score: "+score,width/2,10,1)
-  // renderText("a",width/2,10,2)
+    renderText("score: "+score,width/2,10,2)
+    }else if(m.s == S.M){
+      renderText("back",width/2,height/3,4)
+      renderText("to",width/2,height/3 + (4*4)+4 ,4)
+      renderText("rescue",width/2,height/3+ (4*4*2)+8,4)
+      renderText("press+attack+to+start",width/2,height/2+ (4*4*2)+14,1)
+    }
   }
     canvas.flush();
     fpsM.tick()
