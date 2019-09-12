@@ -2,15 +2,16 @@ import './lib/tiny-canvas.js';
 import './lib/sounds.js';
 import { resolve } from 'url';
 import { rejects } from 'assert';
-import 'fpsmeter';
+//import 'fpsmeter';
 
 declare var fireSound: any;
 declare var jumpSound: any;
 declare var hitSound: any;
 declare var coinSound: any;
-declare var FPSMeter: any;
 
-const fpsM = new FPSMeter();
+//declare var FPSMeter: any;
+
+//const fpsM = new FPSMeter();
 
 declare var TC: any;
 declare var TCTex: any;
@@ -83,7 +84,7 @@ enum EventType {
 
 type Action = EventType
 type Model = State;
-var canvas = TC(document.getElementById('c'))
+var cn = TC(document.getElementById('c'))
 interface AABB {
   lt: Vector
   rt: Vector
@@ -98,19 +99,6 @@ function rdnAngle(): number{
   }else{
       return v * Math.PI
   }
-}
-
-function getAABB(b: Body): AABB {
-  return {
-    lt: { x: b.p.x, y: b.p.y },
-    rt: { x: b.p.x + b.w, y: b.p.y },
-    rb: { x: b.p.x + b.w, y: b.p.y + b.h },
-    lb: { x: b.p.x, y: b.p.y + b.h }
-  }
-}
-
-function getTileIndeces(v: Vector): number {
-  return Math.floor(v.y / 20 /* tileSize */) * 50 /* worldSize */ + Math.floor(v.x / 20);
 }
 
 export function collide(body1: Body, body2: Body): boolean {
@@ -136,7 +124,7 @@ function loadTextures(urls: string[]): Promise<ImgTexture[]> {
         const tex1: ImgTexture  = {
           w: img.width,
           h: img.height,
-          t: TCTex(canvas.g, g.canvas, img.width, img.height) as WebGLTexture
+          t: TCTex(cn.g, g.canvas, img.width, img.height) as WebGLTexture
         }
 
         g.clearRect(0, 0, img.width, img.height)
@@ -147,7 +135,7 @@ function loadTextures(urls: string[]): Promise<ImgTexture[]> {
         const tex2: ImgTexture = {
           w: img.width,
           h: img.height,
-          t: TCTex(canvas.g, g.canvas, img.width, img.height) as WebGLTexture
+          t: TCTex(cn.g, g.canvas, img.width, img.height) as WebGLTexture
         }
         
         var i = index*2;
@@ -167,12 +155,12 @@ function createBulletTexture(){
   const g = document.createElement("canvas").getContext("2d")
   g.canvas.width = 4
   g.canvas.height = 4
-  g.clearRect(0, 0, canvas.width, canvas.height);
+  g.clearRect(0, 0, cn.width, cn.height);
   g.fillStyle = '#ff6';
   g.beginPath();
   g.arc(2, 2, 2, 0, 2 * Math.PI);
   g.fill()
-  return TCTex(canvas.g, g.canvas, 4, 4) as WebGLTexture
+  return TCTex(cn.g, g.canvas, 4, 4) as WebGLTexture
 }
 
 loadTextures(["sh.png","h.png","bh.png"
@@ -197,7 +185,7 @@ loadTextures(["sh.png","h.png","bh.png"
   const WALK_SPEED = 6
   let startTime = 0;
   let id = 0;
-  const [width, height] = [canvas.g.canvas.width, canvas.g.canvas.height]
+  const [width, height] = [cn.g.canvas.width, cn.g.canvas.height]
 
   let particles: Particle[] = []
   let persistence: Particle[] = []
@@ -262,19 +250,10 @@ loadTextures(["sh.png","h.png","bh.png"
     cam.p.y = y + ny
     radioToShake *= 0.9
   }
-/*   canvas.g.canvas.addEventListener("click", (event) => {
-    const pos = getMousePos(canvas.g.canvas, event)
-    for(var i = 0; i < currentState.hostages.length; i++){
-      const host = currentState.hostages[i]
-        host.position.x = cam.position.x+pos.x
-        host.position.y = cam.position.y+pos.y
-        host.visible = true
-    }
-  }) */
 
-  canvas.g.canvas.addEventListener("click", (event) => {
+  cn.g.canvas.addEventListener("click", (event) => {
     let take = 1
-    const pos = getMousePos(canvas.g.canvas, event)
+    const pos = getMousePos(cn.g.canvas, event)
     for(var i = 0; i < currentState.es.length; i++){
       const ene = currentState.es[i]
       if(!ene.vi && take > 0){
@@ -348,6 +327,7 @@ loadTextures(["sh.png","h.png","bh.png"
 
 
   const handlerStart = (ev: TouchEvent) => {
+    console.log("handlerStart")
     switch (ev.currentTarget['id']) {
       case "a":
         currentAction = EventType.JP
@@ -368,6 +348,7 @@ loadTextures(["sh.png","h.png","bh.png"
     }
   }
   const handlerEnd = (ev: TouchEvent) => {
+    console.log("handlerEnd")
     switch (ev.currentTarget['id']) {
       case "b":
         currentAction = EventType.AR
@@ -388,7 +369,9 @@ loadTextures(["sh.png","h.png","bh.png"
   const psOp = { passive: true };
   svgs.forEach(rec => {
     rec.addEventListener("touchstart", handlerStart, psOp);
+    rec.addEventListener("touchmove", handlerStart, psOp);
     rec.addEventListener("touchend", handlerEnd, psOp);
+    rec.addEventListener("touchcancel", handlerEnd, psOp);
   });
 
   const handlerKBDown = (e: KeyboardEvent) => {
@@ -459,7 +442,7 @@ loadTextures(["sh.png","h.png","bh.png"
       }
       const [v0, u0, v1, u1] = frames[frameIndex]
       let text = p.d == Dir.R ? rightT : leftT
-      canvas.img(
+      cn.img(
         text.t,
         -cam.p.x+(p.p.x + (p.w / 2)),
         -cam.p.y+p.p.y,
@@ -474,10 +457,6 @@ loadTextures(["sh.png","h.png","bh.png"
 
   }
 
-/*   function isOverFloor(b: Body): boolean{
-    return b.position.y + b.height == FLOOR || collideFloorBottom(b,secondFloorBody);
-  }
- */
   function isOverFloor(b: Body): boolean{
     let floorBottoms: boolean = false;
     for(var i=0;i<floors.length;i++){
@@ -571,7 +550,6 @@ loadTextures(["sh.png","h.png","bh.png"
       default:
         break;
     }
-    
 
      move(m.p)
 
@@ -631,7 +609,6 @@ loadTextures(["sh.png","h.png","bh.png"
       const p = particles[i]
       move(p)
 
-
       for(var f=0; f<floors.length;f++){
         if(collideFloorBottom(p,floors[f])){
           particles.splice(i, 1)
@@ -665,10 +642,10 @@ loadTextures(["sh.png","h.png","bh.png"
   }
 
   function renderMountain() {
-    canvas.push()
-    canvas.scale(6,6)
+    cn.push()
+    cn.scale(6,6)
     for (var x = 0; x < 100; x += 20) {
-      canvas.img(
+      cn.img(
         lMountain.t,
        (-cam.p.x*0.06) + x,
        (-cam.p.y*0.06) + 5,
@@ -680,7 +657,7 @@ loadTextures(["sh.png","h.png","bh.png"
         1
       );
     }
-      canvas.pop()
+      cn.pop()
   }
 
   function renderFloor() {
@@ -688,7 +665,7 @@ loadTextures(["sh.png","h.png","bh.png"
         const floor = floors[f]
         for (var x = floor.p.x; x <= floor.p.x+floor.w ; x += 20) {
           const text = x % 7 == 0 ? leftFloor : rightFloor
-          canvas.img(
+          cn.img(
             text.t,
             -cam.p.x+x,
             -cam.p.y+(floor.p.y-10),
@@ -773,7 +750,7 @@ function renderText(w: string,x: number,y:number,s:number){
   const coor = renderCoord(w)
   var newX = -((w.length* (4*s) ) /2) ;
   for(var c = 0; c<coor.length;c++){
-    canvas.img(
+    cn.img(
       abc.t,
       newX+x,
       y,
@@ -808,18 +785,18 @@ function renderCoord(w: string): [number,number,number,number][]{
 
 
   const render = (m: Model) => {
-    canvas.g.canvas.style.width = "auto";
-    canvas.g.canvas.style.height =  Math.round(window.innerHeight*0.95) + "px" ;
-    canvas.g.viewport(0, 0, canvas.g.canvas.width, canvas.g.canvas.height);
+    cn.g.canvas.style.width = "auto";
+    cn.g.canvas.style.height =  Math.round(window.innerHeight*0.95) + "px" ;
+    cn.g.viewport(0, 0, cn.g.canvas.width, cn.g.canvas.height);
 
     if(window.innerHeight>window.innerWidth){
-      canvas.cls()
-      canvas.bkg(0,0,0)
+      cn.cls()
+      cn.bkg(0,0,0)
       renderText("flip:phone",40,60,1)
     }else{
     if(m.s == S.G ){
-    canvas.cls()
-    canvas.bkg(57/255,73/255,81/255)
+    cn.cls()
+    cn.bkg(57/255,73/255,81/255)
     renderMountain()
 
     const p = m.p
@@ -860,7 +837,7 @@ function renderCoord(w: string): [number,number,number,number][]{
     for (var i = 0; i < m.bs.length; i++) {
       const b = m.bs[i]
       if (b.vi) {
-        canvas.img(
+        cn.img(
           bulletTexture,
           -cam.p.x+b.p.x,
           -cam.p.y+b.p.y,
@@ -885,7 +862,7 @@ function renderCoord(w: string): [number,number,number,number][]{
     for (var i = 0; i < particles.length; i++) {
       const p = particles[i]
         if(p && p.vi){
-          canvas.img(
+          cn.img(
             rbotHit.t,
             -cam.p.x+p.p.x,
             -cam.p.y+p.p.y,
@@ -902,7 +879,7 @@ function renderCoord(w: string): [number,number,number,number][]{
     for (var i = 0; i < persistence.length; i++) {
       const p = persistence[i]
         if(p && p.vi){
-          canvas.img(
+          cn.img(
             rbotHit.t,
             -cam.p.x+p.p.x,
             -cam.p.y+p.p.y,
@@ -923,8 +900,8 @@ function renderCoord(w: string): [number,number,number,number][]{
       renderText("press+attack+to+start",width/2,height/2+ (4*4*2)+14,1)
     }
   }
-    canvas.flush();
-    fpsM.tick()
+    cn.flush();
+   // fpsM.tick()
   }
 
   if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
