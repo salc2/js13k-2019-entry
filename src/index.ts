@@ -364,53 +364,6 @@ let spawnEnemyId:number = 0
     requestAnimationFrame(keepAnimation);
   }
 
-
-  const handlerStart = (ev: TouchEvent) => {
-    switch (ev.currentTarget['id']) {
-      case "a":
-        currentAction = EventType.JP
-        break;
-      case "b":
-        currentAction = EventType.AP
-        break;
-      case "l":
-        currentAction = EventType.LP
-        break;
-      case "r":
-        currentAction = EventType.RP
-        break;
-
-      default:
-        // code...
-        break;
-    }
-  }
-  const handlerEnd = (ev: TouchEvent) => {
-    switch (ev.currentTarget['id']) {
-      case "b":
-        currentAction = EventType.AR
-        break;
-      case "l":
-        currentAction = EventType.LR
-        break;
-      case "r":
-        currentAction = EventType.RR
-        break;
-      default:
-        // code...
-        break;
-    }
-  }
-
-  const svgs: any = document.querySelectorAll("rect");
-  const psOp = { passive: true };
-  svgs.forEach(rec => {
-    rec.addEventListener("touchstart", handlerStart, psOp);
-    rec.addEventListener("touchmove", handlerStart, psOp);
-    rec.addEventListener("touchend", handlerEnd, psOp);
-    rec.addEventListener("touchcancel", handlerEnd, psOp);
-  });
-
   const handlerKBDown = (e: KeyboardEvent) => {
     switch (e.keyCode) {
       case 37:
@@ -963,14 +916,6 @@ let renderCoord: (w: string) => [number,number,number,number][] = (w: string) =>
         }
     }
   }
-
-  window.addEventListener("touchstart", () =>{
-    const svgs: any = document.querySelectorAll("svg")
-    svgs.forEach(svg => {
-      svg.style.display = "block";
-    });
-  })
-
 
   runGame()
 })
