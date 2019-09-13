@@ -1,7 +1,7 @@
-function E(c){
+function E(c) {
     this.n = c.createGain()
     this.n.gain.value = 0
-    this.addEventToQueue = function(){
+    this.add = function(){
       this.n.gain.linearRampToValueAtTime(0, c.currentTime);
       this.n.gain.linearRampToValueAtTime(1, c.currentTime + 0.001);
       this.n.gain.linearRampToValueAtTime(0.3, c.currentTime + 0.101);
@@ -9,7 +9,7 @@ function E(c){
     }
   }
   
-  function WNB(c){
+  function WNB (c) {
     var bs = c.sampleRate;
     var b = c.createBuffer(1, bs, c.sampleRate);
     var o = b.getChannelData(0);
@@ -53,7 +53,7 @@ function E(c){
   
   
   
-  function fireSound(){
+  let fs = () => {
     
    if(!std){
       std = true
@@ -66,83 +66,77 @@ function E(c){
           vs = 1
         }
         if (vs == 1){
-          v1.addEventToQueue()
+          v1.add()
         }
         if (vs == 2){
-          v2.addEventToQueue()
+          v2.add()
         }
         if (vs == 3){
-          v3.addEventToQueue()
+          v3.add()
         }
         if (vs == 4){
-          v4.addEventToQueue()
+          v4.add()
         }
   }
 
-var o = ctx.createOscillator();
-o.type = 'square'
-var v = ctx.createGain();
-o.connect(v)
-v.connect(ctx.destination);
-v.gain.setValueAtTime(0,ctx.currentTime)
-var std2 = false
+function Setup(t){
+  this.o = ctx.createOscillator();
+  this.o.type = t
+  this.v = ctx.createGain();
+  this.o.connect(this.v)
+  this.v.connect(ctx.destination)
+  this.v.gain.setValueAtTime(0,ctx.currentTime)
+  this.std = false
+}
+const SQ = 'square'
 
-function jumpSound(){
+let jsSet = new Setup(SQ)
+let js = () => {
   const r = (Math.random() * (3 - 1) + 1)/2
-  if(!std2){
-      o.start(0)
-    std2 = true
+  if(!jsSet.std){
+    jsSet.o.start(0)
+    jsSet.std = true
   }
-  o.frequency.setValueAtTime(200*r, ctx.currentTime)
-  v.gain.setValueAtTime(0.05,ctx.currentTime)
-  v.gain.exponentialRampToValueAtTime(0.6, ctx.currentTime + 0.1);
-  o.frequency.exponentialRampToValueAtTime(280*r, ctx.currentTime + 0.4);
-  v.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-  v.gain.setValueAtTime(0,ctx.currentTime + 0.4)
+  jsSet.o.frequency.setValueAtTime(200*r, ctx.currentTime)
+  jsSet.v.gain.setValueAtTime(0.05,ctx.currentTime)
+  jsSet.v.gain.exponentialRampToValueAtTime(0.6, ctx.currentTime + 0.1);
+  jsSet.o.frequency.exponentialRampToValueAtTime(280*r, ctx.currentTime + 0.4);
+  jsSet.v.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+  jsSet.v.gain.setValueAtTime(0,ctx.currentTime + 0.4)
 }
 
-function hitSound(){
-  var oh = ctx.createOscillator();
-  oh.type = 'square'
-  var vh = ctx.createGain();
-  oh.connect(vh)
-  vh.connect(ctx.destination);
-  vh.gain.setValueAtTime(0,ctx.currentTime)
-  oh.type = 'square'
-  oh.frequency = 880.6;
-  oh.start(0)
-  vh.gain.setValueAtTime(1,ctx.currentTime)
-  oh.frequency.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-  vh.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-  vh.gain.setValueAtTime(0,ctx.currentTime + 0.5)
+let hs = () => {
+  let hsSet = new Setup(SQ)
+  hsSet.o.connect(hsSet.v)
+  hsSet.v.connect(ctx.destination);
+  hsSet.v.gain.setValueAtTime(0,ctx.currentTime)
+  hsSet.o.frequency = 880.6;
+  hsSet.o.start(0)
+  hsSet.v.gain.setValueAtTime(1,ctx.currentTime)
+  hsSet.o.frequency.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+  hsSet.v.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+  hsSet.v.gain.setValueAtTime(0,ctx.currentTime + 0.5)
 }
 
 
-var oC = ctx.createOscillator();
-oC.type = 'square'
-var vC = ctx.createGain();
-oC.connect(vC)
-vC.connect(ctx.destination);
-vC.gain.setValueAtTime(0,ctx.currentTime)
-var stdC = false
-
-function coinSound(){
-  if(!stdC){
-      oC.start(0)
-    stdC = true
+let csSet = new Setup(SQ)
+let cs = () => {
+  if(!csSet.std){
+    csSet.o.start(0)
+      csSet.std = true
   }
-  oC.frequency.setValueAtTime(1800, ctx.currentTime)
-vC.gain.setValueAtTime(0.005,ctx.currentTime)
-vC.gain.exponentialRampToValueAtTime(0.05, ctx.currentTime + 0.1);
-oC.frequency.exponentialRampToValueAtTime(1800, ctx.currentTime + 0.4);
-vC.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-vC.gain.setValueAtTime(0,ctx.currentTime + 0.4)
+csSet.o.frequency.setValueAtTime(1800, ctx.currentTime)
+csSet.v.gain.setValueAtTime(0.005,ctx.currentTime)
+csSet.v.gain.exponentialRampToValueAtTime(0.05, ctx.currentTime + 0.1);
+csSet.o.frequency.exponentialRampToValueAtTime(1800, ctx.currentTime + 0.4);
+csSet.v.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+csSet.v.gain.setValueAtTime(0,ctx.currentTime + 0.4)
 }
 
-window['fireSound'] = fireSound;
-window['jumpSound'] = jumpSound;
-window['hitSound'] = hitSound;
-window['coinSound'] = coinSound;
+window['fs'] = fs;
+window['js'] = js;
+window['hs'] = hs;
+window['cs'] = cs;
 
 
 

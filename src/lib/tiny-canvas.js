@@ -22,14 +22,14 @@
  * 
  */
 
-function CompileShader(gl, source, type) {
+let CompileShader = (gl, source, type) => {
     var shader = gl.createShader(type);
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
     return shader;
 }
 
-function CreateShaderProgram(gl, vsSource, fsSource) {
+let CreateShaderProgram = (gl, vsSource, fsSource) => {
     var program = gl.createProgram(),
         vShader = CompileShader(gl, vsSource, 35633),
         fShader = CompileShader(gl, fsSource, 35632);
@@ -39,14 +39,14 @@ function CreateShaderProgram(gl, vsSource, fsSource) {
     return program;
 }
 
-function CreateBuffer(gl, bufferType, size, usage) {
+let CreateBuffer = (gl, bufferType, size, usage) => {
     var buffer = gl.createBuffer();
     gl.bindBuffer(bufferType, buffer);
     gl.bufferData(bufferType, size, usage);
     return buffer;
 }
 
-function CreateTexture(gl, image, width, height) {
+let CreateTexture = (gl, image, width, height) =>{
     var texture = gl.createTexture();
     gl.bindTexture(3553, texture);
     gl.texParameteri(3553, 10242, 33071);
@@ -64,7 +64,7 @@ window['TCPrg'] = CreateShaderProgram;
 window['TCBuf'] = CreateBuffer;
 window['TCTex'] = CreateTexture;
 
-function TinyCanvas(canvas) {
+let TinyCanvas = (canvas) => {
     var gl = canvas.getContext('webgl'),
         VERTEX_SIZE = (4 * 2) + (4 * 2) + (4),
         MAX_BATCH = 10922, // floor((2 ^ 16) / 6)
@@ -165,23 +165,23 @@ function TinyCanvas(canvas) {
         'g': gl,
         'c': canvas,
         'col': 0xFFFFFFFF,
-        'bkg': function (r, g, b) {
+        'bkg': (r, g, b) => {
             glClearColor(r, g, b, 1);
         },
-        'cls': function () {
+        'cls': () => {
             glClear(16384);
         },
-        'trans': function (x, y) {
+        'trans': (x, y) => {
             mat[4] = mat[0] * x + mat[2] * y + mat[4];
             mat[5] = mat[1] * x + mat[3] * y + mat[5];
         },
-        'scale': function (x, y) {
+        'scale': (x, y) => {
             mat[0] = mat[0] * x;
             mat[1] = mat[1] * x;
             mat[2] = mat[2] * y;
             mat[3] = mat[3] * y;
         },
-        'rot': function (r) {
+        'rot': (r) => {
             var a = mat[0],
                 b = mat[1],
                 c = mat[2],
@@ -194,7 +194,7 @@ function TinyCanvas(canvas) {
             mat[2] = a * -sr + c * cr;
             mat[3] = b * -sr + d * cr;
         },
-        'push': function () {
+        'push': () => {
             stack[stackp + 0] = mat[0];
             stack[stackp + 1] = mat[1];
             stack[stackp + 2] = mat[2];
@@ -203,7 +203,7 @@ function TinyCanvas(canvas) {
             stack[stackp + 5] = mat[5];
             stackp += 6;
         },
-        'pop': function () {
+        'pop': () => {
             stackp -= 6;
             mat[0] = stack[stackp + 0];
             mat[1] = stack[stackp + 1];
@@ -212,7 +212,7 @@ function TinyCanvas(canvas) {
             mat[4] = stack[stackp + 4];
             mat[5] = stack[stackp + 5];
         },
-        'img': function (texture, x, y, w, h, u0, v0, u1, v1) {
+        'img': (texture, x, y, w, h, u0, v0, u1, v1) => {
             var x0 = x,
                 y0 = y,
                 x1 = x + w,
@@ -278,7 +278,7 @@ function TinyCanvas(canvas) {
                 count = 0;
             }
         },
-        'flush': function () {
+        'flush': () => {
             if (count == 0) return;
             glBufferSubData(34962, 0, vPositionData.subarray(0, count * VERTEX_SIZE));
             glDrawElements(4, count * VERTICES_PER_QUAD, 5123, 0);

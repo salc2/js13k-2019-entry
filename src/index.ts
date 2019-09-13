@@ -4,10 +4,10 @@ import { resolve } from 'url';
 import { rejects } from 'assert';
 //import 'fpsmeter';
 
-declare var fireSound: any;
-declare var jumpSound: any;
-declare var hitSound: any;
-declare var coinSound: any;
+declare var fs: any;
+declare var js: any;
+declare var hs: any;
+declare var cs: any;
 
 //declare var FPSMeter: any;
 
@@ -16,6 +16,7 @@ declare var coinSound: any;
 declare var TC: any;
 declare var TCTex: any;
 let rnd: () => number = Math.random
+let rou: (number) => number = Math.round
 
 interface Vector {
   x: number
@@ -92,7 +93,7 @@ interface AABB {
   lb: Vector
 }
 
-function rdnAngle(): number{
+let rdnAngle: () => number = () => {
   const v = (rnd() * (125-0) + 0)/1000
   if(rnd() >= 0.5){
       return (2-v) * Math.PI 
@@ -101,7 +102,7 @@ function rdnAngle(): number{
   }
 }
 
-export function collide(body1: Body, body2: Body): boolean {
+let collide: (body1: Body, body2: Body) => boolean =  (body1: Body, body2: Body) =>{
   const result = body1.p.x < (body2.p.x + body2.w) &&
     body1.p.x + (body1.w) > body2.p.x &&
     body1.p.y < body2.p.y + body2.h &&
@@ -109,7 +110,7 @@ export function collide(body1: Body, body2: Body): boolean {
   return result;
 }
 
-function loadTextures(urls: string[]): Promise<ImgTexture[]> {
+let loadTextures:(urls: string[]) => Promise<ImgTexture[]> =  (urls: string[]) => {
   return new Promise((resolver, rejects) => {
     let result: ImgTexture[] = new Array<ImgTexture>();
 
@@ -117,26 +118,29 @@ function loadTextures(urls: string[]): Promise<ImgTexture[]> {
       const img = new Image
       img.src = url
       img.onload = () => {
+
         const g = document.createElement("canvas").getContext("2d")
         g.canvas.height = img.height
         g.canvas.width = img.width
         g.drawImage(img, 0, 0, img.width, img.height)
-        const tex1: ImgTexture  = {
+
+        let createText: () => ImgTexture = () => { 
+          return {
           w: img.width,
           h: img.height,
           t: TCTex(cn.g, g.canvas, img.width, img.height) as WebGLTexture
         }
+      }
+
+        const tex1 = createText()
 
         g.clearRect(0, 0, img.width, img.height)
         g.save()
         g.scale(-1, 1)
         g.drawImage(img, img.width * -1, 0, img.width, img.height)
         g.restore()
-        const tex2: ImgTexture = {
-          w: img.width,
-          h: img.height,
-          t: TCTex(cn.g, g.canvas, img.width, img.height) as WebGLTexture
-        }
+
+        const tex2 = createText()
         
         var i = index*2;
         result[i++] = tex1
@@ -151,7 +155,7 @@ function loadTextures(urls: string[]): Promise<ImgTexture[]> {
   })
 }
 
-function createBulletTexture(){
+let createBulletTexture: () => any = () => {
   const g = document.createElement("canvas").getContext("2d")
   g.canvas.width = 4
   g.canvas.height = 4
@@ -178,6 +182,7 @@ loadTextures(["sh.png","h.png","bh.png"
   const GRAVITY = 10
 
   let score = 0
+  let startPhysics = false
   let addScore = 0
   let toNextScore = 10
 
@@ -190,14 +195,7 @@ loadTextures(["sh.png","h.png","bh.png"
   let particles: Particle[] = []
   let persistence: Particle[] = []
 
-  function getMousePos(canvas, evt) {
-    var rect = canvas.getBoundingClientRect();
-    return {
-      x: (evt.clientX - rect.left)*0.3,
-      y: (evt.clientY - rect.top) * 0.15
-    };
-  }
-  function initBullets(num: number): Bullet[] {
+  let initBullets: (num: number) => Bullet[] = (num: number) => {
     const bs: Bullet[] = []
     for (let i = 0; i < num; i++) {
       bs.push({ p: { x: 50, y: 50 }, v: { x: 0, y: 0 }, vi: false, d: Dir.L, w: 4, h: 4 })
@@ -205,16 +203,16 @@ loadTextures(["sh.png","h.png","bh.png"
     return bs
   }
 
-  function initHosta(num: number): Body[] {
+  let initHosta:(num: number) => Body[] = (num: number) => {
     const bs: Body[] = []
     for (let i = 0; i < num; i++) {
-      bs.push({ p: { x: 250, y: 0 }, v: { x: 0, y: 0 }, vi: true, d: Dir.L, w: 16, h: 16 })
+      bs.push({ p: { x: 250, y: 0 }, v: { x: 0, y: 0 }, vi: false, d: Dir.L, w: 16, h: 16 })
     }
     return bs
   }
 
 
-  function newEnemy(x: number, y:number, vel: number): Enemy {
+  let newEnemy: (x: number, y:number, vel: number) => Enemy = (x: number, y:number, vel: number) => {
     return {
       p: { x: x, y: y },
       v: { x: vel, y: 0.0 },
@@ -226,7 +224,7 @@ loadTextures(["sh.png","h.png","bh.png"
       l: 3
     }
   }
-  function newEnemies(x: number, y:number, n: number): Enemy []{
+  let newEnemies: (x: number, y:number, n: number) => Enemy [] = (x: number, y:number, n: number) => {
     const es = []
     for(var i=0;  i< n; i++){
       es.push(newEnemy(x,y,WALK_SPEED* rnd() * (3.9-1.7) + 1.7))
@@ -241,7 +239,7 @@ loadTextures(["sh.png","h.png","bh.png"
   let radioToShake = 0
   let shake = false
 
-  function shaking(){
+  let shaking: () => void = () => {
     const x = 0, y = 0
     const ang = rnd() % Math.PI * 2
     const nx = Math.sin(ang) * radioToShake
@@ -251,26 +249,46 @@ loadTextures(["sh.png","h.png","bh.png"
     radioToShake *= 0.9
   }
 
-  cn.g.canvas.addEventListener("click", (event) => {
-    let take = 1
-    const pos = getMousePos(cn.g.canvas, event)
-    for(var i = 0; i < currentState.es.length; i++){
-      const ene = currentState.es[i]
-      if(!ene.vi && take > 0){
-        ene.p.x = cam.p.x+pos.x
-        ene.p.y = cam.p.y+pos.y
-        ene.vi = true
-        ene.vi = true
-        ene.l = 5
-        ene.v.x =  rnd() * (3.9-1.7) + 1.7  * ( currentState.p.p.x > ene.p.x ?
-        WALK_SPEED : -WALK_SPEED)
-        ene.d = ene.v.x > 0 ? Dir.L : Dir.R
-        take --
-      }
-    }
-  })
+let spawnEnemyId:number = 0
 
-  function explodeParticles(x: number, y: number): void{
+ let spawnEnemy: () => void = () => {
+   let take = rou(rnd() * (3-1) + 1)
+   let pos:Vector[] = [{x:394,y:38},{x:686,y:38}]
+   let ind = Math.floor(rnd()*pos.length)
+
+  for(var i = 0; i < currentState.es.length; i++){
+    const ene = currentState.es[i]
+    if(!ene.vi && take > 0){
+      ene.p.x = cam.p.x+pos[ind].x
+      ene.p.y = cam.p.y+pos[ind].y
+      ene.vi = true
+      ene.l = 5
+      ene.v.x =  rnd() * (3.9-1.7) + 1.7  * ( currentState.p.p.x > ene.p.x ?
+      WALK_SPEED : -WALK_SPEED)
+      ene.d = ene.v.x > 0 ? Dir.L : Dir.R
+      take --
+    }
+  }
+ }
+
+ let spawnHostId:number = 0
+
+ let spawnHost: ()=> void = () => {
+   let pos:Vector[] = [{x:817,y:81},{x:580,y:81},{x:716,y:120},{x:498,y:120}]
+   let ind = Math.floor(rnd()*pos.length)
+  for(var i = 0; i < currentState.hs.length; i++){
+    const hos = currentState.hs[i]
+    if(!hos.vi){
+      hos.p.x = cam.p.x+pos[ind].x
+      hos.p.y = cam.p.y+pos[ind].y
+      hos.vi = true
+      hos.d = ind > 2 ? Dir.L : Dir.R
+      break;
+    }
+  }
+ }
+
+  let explodeParticles: (x: number, y: number) => void = (x: number, y: number)  => {
     var rnd = Math.random
     const sp = WALK_SPEED*2
     const jp = JUMP_VEL*3
@@ -283,11 +301,17 @@ loadTextures(["sh.png","h.png","bh.png"
   }
 
 
-  function createInitState(): Model {
+  let createInitState: () => Model = () =>  {
     score = 0
     addScore = 0
     particles = []
     persistence = []
+
+
+    window.clearInterval(spawnEnemyId)
+    spawnEnemyId = window.setInterval(spawnEnemy,5000)
+    window.clearInterval(spawnHostId)
+    spawnHostId = window.setInterval(spawnHost,5000)
 
     return {
       p: {
@@ -302,7 +326,7 @@ loadTextures(["sh.png","h.png","bh.png"
       },
       es: newEnemies(34,0,50),
       bs: initBullets(60),
-      hs: initHosta(1),
+      hs: initHosta(5),
       s: S.M
     }
   }
@@ -311,14 +335,19 @@ loadTextures(["sh.png","h.png","bh.png"
 
   const FLOOR = height - 10
   const SECOND_FLOOR = FLOOR * 0.7
-  const zone: Body = { p: { x: 50, y: FLOOR }, v: { x: 0, y: 0 }, vi: true, d: Dir.L, w: 150, h: 20 }
+  const THIRD_FLOOR = SECOND_FLOOR * 0.6
+  const zone: Body = { p: { x: -20, y: FLOOR }, v: { x: 0, y: 0 }, vi: true, d: Dir.L, w: 150, h: 20 }
 
 
-  function createFloor(x:number, y:number, width: number): Body {
+  let createFloor: (x:number, y:number, width: number) => Body = (x:number, y:number, width: number) => {
     return {p:{x:x, y: y},w: width, h: 20,d: Dir.L,v:{x:0,y:0},vi: true}
   }
 
-  const floors = [createFloor(0.0,FLOOR,900), createFloor(200.0,SECOND_FLOOR,260),createFloor(300.0,SECOND_FLOOR,360)]
+  const floors = [createFloor(0.0,FLOOR,950), 
+    createFloor(300.0,SECOND_FLOOR,160),
+    createFloor(540.0,SECOND_FLOOR,320),
+    createFloor(380.0,THIRD_FLOOR,320)
+  ]
 
   const keepAnimation = (time: number) => {
     currentDelta = (time - startTime) / 100;
@@ -331,13 +360,12 @@ loadTextures(["sh.png","h.png","bh.png"
     id = requestAnimationFrame(keepAnimation);
   };
 
-  function runGame() {
+  let runGame: () => void = () => {
     requestAnimationFrame(keepAnimation);
   }
 
 
   const handlerStart = (ev: TouchEvent) => {
-    console.log("handlerStart")
     switch (ev.currentTarget['id']) {
       case "a":
         currentAction = EventType.JP
@@ -345,10 +373,10 @@ loadTextures(["sh.png","h.png","bh.png"
       case "b":
         currentAction = EventType.AP
         break;
-      case "left":
+      case "l":
         currentAction = EventType.LP
         break;
-      case "right":
+      case "r":
         currentAction = EventType.RP
         break;
 
@@ -358,15 +386,14 @@ loadTextures(["sh.png","h.png","bh.png"
     }
   }
   const handlerEnd = (ev: TouchEvent) => {
-    console.log("handlerEnd")
     switch (ev.currentTarget['id']) {
       case "b":
         currentAction = EventType.AR
         break;
-      case "left":
+      case "l":
         currentAction = EventType.LR
         break;
-      case "right":
+      case "r":
         currentAction = EventType.RR
         break;
       default:
@@ -437,12 +464,12 @@ loadTextures(["sh.png","h.png","bh.png"
     let frameIndex = 0,
       tickCount = 0
 
-    this.reset = function () {
+    this.reset = () => {
       if (!(frameIndex < nFrames - 1)) {
         frameIndex = 0;
       }
     }
-    this.update = function (p: Body) {
+    this.update = (p: Body) => {
       tickCount += 1
       if (tickCount > ticksPerFrame) {
         tickCount = 0
@@ -457,7 +484,7 @@ loadTextures(["sh.png","h.png","bh.png"
       let text = p.d == Dir.R ? rightT : leftT
       cn.img(
         text.t,
-        -cam.p.x+(p.p.x + (p.w / 2)),
+        -cam.p.x+ (p.p.x - (p.w / 2) ),
         -cam.p.y+p.p.y,
         p.w,
         p.h,
@@ -470,7 +497,7 @@ loadTextures(["sh.png","h.png","bh.png"
 
   }
 
-  function isOverFloor(b: Body): boolean{
+  let isOverFloor: (b: Body) => boolean = (b: Body)  => {
     let floorBottoms: boolean = false;
     for(var i=0;i<floors.length;i++){
       floorBottoms = floorBottoms || collideFloorBottom(b,floors[i])
@@ -490,7 +517,7 @@ loadTextures(["sh.png","h.png","bh.png"
   let gunReady: number = 0
   let jumpTries:number = 2
   let ticksHitted: number = 0
-  function update(a: Action, m: Model) {
+  let update:(a: Action, m: Model) => void = (a: Action, m: Model) => {
     
     if(m.s == S.G){
     if(radioToShake > 0.0002){
@@ -506,7 +533,7 @@ loadTextures(["sh.png","h.png","bh.png"
           jumpTries--
           
           p.v.y = p.c ? -JUMP_VEL/2 : -JUMP_VEL
-          jumpSound()
+          js()
         }
         p.s = false
         break;
@@ -536,13 +563,13 @@ loadTextures(["sh.png","h.png","bh.png"
           const b = m.bs[i]
           if (!b.vi && gunReady == 0) {
             const angle = rdnAngle()
-            b.p.x = p.p.x + p.w + b.w
+            b.p.x = p.p.x - (p.w  / 2 )
             b.p.y = p.p.y + (p.h / 2.4)
             b.v.x = (p.d == Dir.R ? 35 : -35) * Math.cos(angle)
             b.v.y = 5 * Math.sin(angle)
             b.vi = true
             gunReady = 3
-            fireSound()
+            fs()
             radioToShake = 2
             break;
           }
@@ -551,7 +578,7 @@ loadTextures(["sh.png","h.png","bh.png"
         let host = m.p.c
         host.vi = true
         host.p.x = m.p.d == Dir.L ? m.p.p.x - 25 : m.p.p.x + 25
-        host.p.y = m.p.p.y - 10
+        host.p.y = m.p.p.y - 3
         m.p.c = null
       }
 
@@ -566,17 +593,21 @@ loadTextures(["sh.png","h.png","bh.png"
     }
 
      move(m.p)
+     m.p.p.x = Math.max(m.p.p.x,0)
       m.p.l = m.p.p.y > height ? 0 : m.p.l
     for (var i = 0; i < m.hs.length; i++) {
       const h = m.hs[i]
       move(h)
+      h.vi = h.p.y > height ? false : h.vi 
       if(h.vi && collide(m.p,h) && !m.p.c){
         h.vi = false
         m.p.c = h
       }
-      if(h.vi && collide(h,zone)){
+
+      if(h.vi && collide(h,zone) || (m.p.c && collide(m.p,zone) ) ){
         addScore += 500
         h.vi = false
+        m.p.c = null
       }
     }
     for (var i = 0; i < m.es.length; i++) {
@@ -586,14 +617,14 @@ loadTextures(["sh.png","h.png","bh.png"
         e.hi = false
       }
       move(e)
-      if (e.p.x < 0 || (e.p.x + 20 > 900)) {
+      if (e.p.x < 0 || (e.p.x + 20 > 950)) {
         e.v.x = e.v.x * -1
         e.d = e.v.x > 0 ? Dir.L : Dir.R
       }
       for(var j = 0;j< m.bs.length;j++){
         const b = m.bs[j]
         if (e.vi && b.vi && collide(b, e)) {
-          hitSound()
+          hs()
           e.hi = true
           ticksHitted = 8
           e.p.x += (b.v.x > 0 ? + 18 : -18)
@@ -613,7 +644,7 @@ loadTextures(["sh.png","h.png","bh.png"
       }
       if(e.vi && collide(e,m.p)){
         m.p.l--
-        hitSound()
+        hs()
         m.p.p.x +=  m.p.d == Dir.L ? 10 : -10
         m.p.p.y +=  -3
       }
@@ -639,7 +670,7 @@ loadTextures(["sh.png","h.png","bh.png"
 
     if(toNextScore <= 0 && addScore>0){
       score+=10
-      coinSound()
+      cs()
       toNextScore = 10
       addScore = Math.max(addScore-10,0)
 
@@ -651,15 +682,16 @@ loadTextures(["sh.png","h.png","bh.png"
   }else if(m.s == S.M){
     if(a == EventType.AP){
       m.s = S.G
-      fireSound()
+      fs()
+    startPhysics = true    
     }
   }else{
     if(a == EventType.LP || a == EventType.RP){
       menuSelection =  (menuSelection+1) % 2
-      coinSound()
+      cs()
     }
     if(a == EventType.AP && menuSelection == 0 && navigator.onLine){
-      window.location.href = 'https://twitter.com/intent/tweet?url=https%3A%2F%2Fjs13kgames.com%2Fentries%2Fback-to-rescue&text=I%20played%20Back%20to%20Rescue%20by%20@salc2%20and%20reach%20'+(addScore+score)+'%20points%20&hashtags=js13k%2Cjs13games';
+      window.location.href = 'https://twitter.com/intent/tweet?url=https%3A%2F%2Fjs13kgames.com%2Fentries%2Fback-to-rescue&text=I%20played%20Back%20to%20Rescue%20by%20@salc2%20and%20reached%20'+(addScore+score)+'%20points%20&hashtags=js13k%2Cjs13games';
     }
     if(a == EventType.AP && menuSelection == 1){
       currentState = createInitState()
@@ -670,11 +702,11 @@ if(m.p.l <= 0){
   m.s = S.GO
 }  
 }
-  function moveCam(b: Body): void{
+  let moveCam: (b: Body) => void = (b: Body) => { 
     cam.p.x = Math.max(b.p.x - (cam.w/2),0)
   }
 
-  function renderMountain() {
+  let renderMountain: () => void = () => {
     cn.push()
     cn.scale(6,6)
     for (var x = 0; x < 100; x += 20) {
@@ -693,14 +725,14 @@ if(m.p.l <= 0){
       cn.pop()
   }
 
-  function renderFloor() {
+  let renderFloor: () => void = () => {
       for(var f=0; f<floors.length;f++){
         const floor = floors[f]
         for (var x = floor.p.x; x <= floor.p.x+floor.w ; x += 20) {
           const text = x % 7 == 0 ? leftFloor : rightFloor
           cn.img(
             text.t,
-            -cam.p.x+x,
+            -cam.p.x + (x - (text.w/2)),
             -cam.p.y+(floor.p.y-10),
             text.w,
             text.h,
@@ -713,7 +745,7 @@ if(m.p.l <= 0){
       }
   }
 
-  function ifOnTheFloorgetY(b: Body): number{
+  let ifOnTheFloorgetY: (b: Body) => number = (b: Body)  => {
     let bottomCollide: number = -1
     for(var i = 0;i< floors.length;i++){
        bottomCollide = collideFloorBottom(b,floors[i]) ? floors[i].p.y : -1 
@@ -721,15 +753,15 @@ if(m.p.l <= 0){
     return bottomCollide;
   }
 
-  function applyGravity(b: Body) {
+  let applyGravity: (b: Body) => void = (b: Body) => {
     b.v.y =  ifOnTheFloorgetY(b) < 0 ? b.v.y + (GRAVITY * currentDelta) : b.v.y
   }
 
-  function outsideScreen(b: Bullet) {
+  let outsideScreen: (b: Bullet) => boolean = (b: Bullet) => {
     return b.p.x < 0 || b.p.x > 900
   }
 
-  function moveBullet(b: Bullet): void {
+  let moveBullet: (b: Bullet)=>  void = (b: Bullet) => {
     if (outsideScreen(b)) {
       b.vi = false
       b.v.x = 0
@@ -738,25 +770,17 @@ if(m.p.l <= 0){
     b.p.y += b.v.y * currentDelta
   }
 
-  function collideFloorTop(b: Body, f: Body): boolean {
+  let collideFloorTop: (b: Body, f: Body) => boolean = (b: Body, f: Body) => {
    return collide(b,f) &&
     f.p.y+(f.h/2) > b.p.y
   }
-  function collideFloorBottom(b: Body, f: Body): boolean {
+  let collideFloorBottom:(b: Body, f: Body) => boolean= (b: Body, f: Body) => {
     return collide(b,f) &&
     b.p.y < f.p.y
    }
 
-   function collideFloorLeft(b: Body,f: Body): boolean {
-    return collide(b,f) &&
-    b.p.x < f.p.x && b.p.x+b.w > f.p.x
-   }
-   function collideFloorRight(b: Body,f: Body): boolean {
-    return collide(b,f) &&
-    b.p.x+(b.w*0.9) < f.p.x && b.v.x > 0
-   }
-
-  function move(b: Body): void {
+  let move: (b: Body) => void = (b: Body) => {
+    if(startPhysics){
     const groundY = ifOnTheFloorgetY(b)
     b.p.y = groundY < 0 ? b.p.y + (b.v.y * currentDelta) : groundY - b.h
     b.p.x += b.v.x * currentDelta
@@ -775,11 +799,11 @@ if(m.p.l <= 0){
         }
       }
     }
-
+  }
   }
 
 
-function renderText(w: string,x: number,y:number,s:number){
+let renderText: (w: string,x: number,y:number,s:number) => void = (w: string,x: number,y:number,s:number) => {
   const coor = renderCoord(w)
   var newX = -((w.length* (4*s) ) /2) ;
   for(var c = 0; c<coor.length;c++){
@@ -799,7 +823,7 @@ function renderText(w: string,x: number,y:number,s:number){
   }
 }
 
-function renderCoord(w: string): [number,number,number,number][]{
+let renderCoord: (w: string) => [number,number,number,number][] = (w: string) => {
   const letters: string[] = ['abcdefghijklm','nopqrstuvwxyz', '0123456789:! ']
   let resp:[number,number,number,number][] = new Array<[number,number,number,number]>()
 
@@ -819,7 +843,7 @@ function renderCoord(w: string): [number,number,number,number][]{
 
   const render = (m: Model) => {
     cn.g.canvas.style.width = "auto";
-    cn.g.canvas.style.height =  Math.round(window.innerHeight*0.95) + "px" ;
+    cn.g.canvas.style.height =  rou(window.innerHeight*0.95) + "px" ;
     cn.g.viewport(0, 0, cn.g.canvas.width, cn.g.canvas.height);
 
     if(window.innerHeight>window.innerWidth){
@@ -903,40 +927,8 @@ function renderCoord(w: string): [number,number,number,number][]{
       }
     }
 
-
-    for (var i = 0; i < particles.length; i++) {
-      const p = particles[i]
-        if(p && p.vi){
-          cn.img(
-            rbotHit.t,
-            -cam.p.x+p.p.x,
-            -cam.p.y+p.p.y,
-            8,
-            8,
-            0,
-            0,
-            .7,
-            1
-          );
-        }
-    }
-
-    for (var i = 0; i < persistence.length; i++) {
-      const p = persistence[i]
-        if(p && p.vi){
-          cn.img(
-            rbotHit.t,
-            -cam.p.x+p.p.x,
-            -cam.p.y+p.p.y,
-            8,
-            8,
-            0,
-            0,
-            .7,
-            1
-          );
-        }
-    }
+    renderParticles(particles)
+    renderParticles(persistence)
     renderText("life: "+m.p.l,width/2,24,1)
     renderText("score: "+score,width/2,10,2)
     }else if(m.s == S.M){
@@ -944,21 +936,40 @@ function renderCoord(w: string): [number,number,number,number][]{
       renderText("to",width/2,height/3 + (4*4)+4 ,4)
       renderText("rescue",width/2,height/3+ (4*4*2)+8,4)
       if(currentTime % 500 > 250){
-        coinSound()
+        cs()
         renderText("press space to start",width/2,height/2+ (4*4*2)+14,1)
       }
     }
   }
     cn.flush();
-   // fpsM.tick()
+  // fpsM.tick()
   }
 
-  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+  let renderParticles: (ps: Body[]) => void = (ps: Body[]) => {
+    for (var i = 0; i < ps.length; i++) {
+      const p = ps[i]
+        if(p && p.vi){
+          cn.img(
+            rbotHit.t,
+            -cam.p.x+p.p.x,
+            -cam.p.y+p.p.y,
+            8,
+            8,
+            0,
+            0,
+            .7,
+            1
+          );
+        }
+    }
+  }
+
+  window.addEventListener("touchstart", () =>{
     const svgs: any = document.querySelectorAll("svg")
     svgs.forEach(svg => {
       svg.style.display = "block";
     });
-  }
+  })
 
 
   runGame()
